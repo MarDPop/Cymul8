@@ -19,13 +19,18 @@ public:
 
     struct step_options
     {
+        friend class ode;
+
         Float min_timestep;
         Float max_timestep;
         Float relative_error;
-        Float* const absolute_error;
+        Float* const inv_absolute_error;
 
+    public:
+        
         step_options(unsigned N) :
-            absolute_error(new Float[N]) {}
+            inv_absolute_error(new Float[N]) {}
+
         ~step_options()
         {
             delete[] absolute_error;
@@ -38,16 +43,12 @@ public:
         Float end_time;
         Float record_interval;
         Float initial_time_step;
-        Float* initial_state;
+        fixed_vector<Float> initial_state;
         STEP step;
 
         run_options(unsigned N) :
-            initial_state(new Float[N]) {}
-
-        ~run_options()
-        {
-            delete[] initial_state;
-        }
+            initial_state(N)
+        {}
     };
 
     class recording
@@ -68,12 +69,21 @@ public:
 
     public:
 
-        recording(unsigned n) : _N(n) {}
-
         void reserve(unsigned N)
         {
             _times.reserve(n);
             _states.reserve(n);
+        }
+
+        recording(unsigned n) : _N(n) {}
+
+        recording(const run_options& options) :
+            _N(options.initial_state.size())
+        {
+            unsigned nRecordings = static_cast<unsigned>(
+                (options.end_time - options.start_time) / options.record_interval
+                ) + 2u;
+            this->reserve(nRecordings);
         }
 
         const std::vector<Float>& get_times()
@@ -108,13 +118,11 @@ public:
 
 private:
 
-    Float* const _state;
+    Float* _state = nullptr;
 
-    Float* const _state_rate;
+    Float* _state_rate = nullptr;
 
-    Float* _k = nullptr;
-
-    Float _time;
+    Float _time; // could be faster if time in state, but probably insignificant for anything but smallest of odes
 
     Float _dt;
 
@@ -124,7 +132,7 @@ private:
 
     static void euler_step(ode& __ode)
     {
-        __ode.dynamics(__ode._state, __ode._state_rate);
+        __ode.dynamics(__ode._state, _ode._time, __ode._state_rate);
         for (unsigned i = 0; i < _N; i++)
         {
             __ode._state[i] += __ode._state_rate[i] * __ode._dt;
@@ -134,109 +142,165 @@ private:
 
     static void huen_step(ode& __ode)
     {
-        const Float dt_half = __ode._state_rate[_N] * static_cast<Float>(0.5);
+        const Float dt_half = __ode._dt * static_cast<Float>(0.5);
 
-        __ode.dynamics(__ode._state, __ode._state_rate);
-        memcpy(__ode._k, __ode._state_rate, __ode._state_bytes);
+        __ode.dynamics(__ode._state, _ode._time, __ode._state_rate);
         for (unsigned i = 0; i < _N; i++)
         {
             __ode._state[i] += __ode._state_rate[i] * __ode._dt;
         }
         __ode._time += __ode._dt;
 
-        __ode.dynamics(__ode._state, __ode._state_rate);
+        __ode.dynamics(__ode._state, _ode._time, __ode._state_rate + _N);
         
         for (unsigned i = 0; i < _N; i++)
         {
-            __ode._state[i] += (__ode.get_state_rate[i] - __ode._k[i]) * dt_half;
+            __ode._state[i] += (__ode._state_rate[i + _N] - __ode._state_rate[i]) * dt_half;
         }
     }
 
     static void rk4_step(ode& __ode)
     {
-        const Float dt_half = __ode._state_rate[_N] * static_cast<Float>(0.5);
+        const Float dt_half = __ode._dt * static_cast<Float>(0.5);
+        Float* x0 = __ode._state + _N;
+        Float* k2 = __ode._state_rate + _N;
+        Float* k3 = k2 + _N;
+        Float* k4 = k3 + _N;
 
-        memcpy(__ode._k, __ode._state, __ode._state_bytes);
+        memcpy(x0, __ode._state, __ode._state_bytes);
 
-        __ode.dynamics(__ode._state, __ode._state_rate);
+        __ode.dynamics(__ode._state, _ode._time, __ode._state_rate);
         
-        Float* k1 = __ode._k + _N;
-        memcpy(k1, __ode._state_rate, __ode._state_bytes);
         for (unsigned i = 0; i < _N; i++)
         {
             __ode._state[i] += __ode._state_rate[i] * dt_half;
         }
         __ode._time += dt_half;
 
-        __ode.dynamics(__ode._state, __ode._state_rate);
-        Float* k2 = k1 + _N;
-        memcpy(k2, __ode._state_rate, __ode._state_bytes);
+        __ode.dynamics(__ode._state, _ode._time, k2);
         for (unsigned i = 0; i < _N; i++)
         {
-            __ode._state[i] = dx0[i] + k2[i] * dt_half;
+            __ode._state[i] = x0[i] + k2[i] * dt_half;
         }
 
-        __ode.dynamics(__ode._state, __ode._state_rate);
-        Float* k3 = k2 + _N;
-        memcpy(k3, __ode._state_rate, __ode._state_bytes);
+        __ode.dynamics(__ode._state, _ode._time, k3);
         for (unsigned i = 0; i < _N; i++)
         {
-            __ode._state[i] = dx0[i] + k3[i] * __ode._dt;
+            __ode._state[i] = x0[i] + k3[i] * __ode._dt;
         }
 
-        __ode._state[_N] += dt_half;
-        __ode.dynamics(__ode._state, __ode._state_rate);
-        Float* k4 = k3 + _N;
-        memcpy(k4, __ode._state_rate, __ode._state_bytes);
-
+        __ode._time += dt_half;
+        __ode.dynamics(__ode._state, _ode._time, k4);
         const Float dt_6 = __ode._dt * static_cast<Float>(0.166666666666666666667);
         for (unsigned i = 0; i < _N; i++)
         {
-            __ode._state[i] = dx0[i] + (k1[i] + k4[i] + 2.0 * (k2[i] + k3[i])) * dt_6;
+            __ode._state[i] = x0[i] + (__ode._state_rate[i] + k4[i] + 2.0 * (k2[i] + k3[i])) * dt_6;
         }
 
     }
 
-    static void rk23_step(ode& __ode)
+    static void euler_huen_step(ode& __ode)
     {
-        __ode.dynamics(__ode._state, __ode._state_rate);
-        const Float t0 = __ode._state[_N];
-        array_wrapper<Float> x0(__ode._state, _N);
-        array_wrapper<Float> k1(__ode._state_rate, _N);
-        array_wrapper<Float> k2(_N);
-        array_wrapper<Float> k3(_N);
-        array_wrapper<Float> k4(_N);
+        const Float dt_half = __ode._dt * static_cast<Float>(0.5);
+        Float* x0 = __ode._state + _N;
+        Float t0 = __ode._time;
 
-        const auto bytes = _N * sizeof(Float);
+        __ode.dynamics(__ode._state, _ode._time, __ode._state_rate);
 
-        constexpr unsigned MAX_ITER = 20u;
+        constexpr unsigned MAX_ITER = 10u;
         for (unsigned _ = 0; _ < MAX_ITER; _++)
         {
-            const Float dt_1 = __ode._state_rate[_N] * static_cast<Float>(0.5);
             for (unsigned i = 0; i < _N; i++)
             {
-                __ode._state[i] = dx0[i] + k1[i] * dt_1;
+                __ode._state[i] = x0[i] + __ode._state_rate[i] * __ode._dt;
             }
-            _ode._state[_N] = t0 + dt1;
+            __ode._time = t0 + __ode._dt;
 
-            __ode.dynamics(__ode._state, __ode._state_rate);
-            memcpy(k2.data(), ode._state_rate, bytes);
+            __ode.dynamics(__ode._state, _ode._time, __ode._state_rate + _N);
 
-            const Float dt_2 = __ode._state_rate[_N] * static_cast<Float>(0.75);
+            Float max_err = 0.0;
             for (unsigned i = 0; i < _N; i++)
             {
-                __ode._state[i] = dx0[i] + k2[i] * dt_2;
+                Float delta = (__ode._state_rate[i + _N] - __ode._state_rate[i]) * dt_half;
+                __ode._state[i] += delta;
+                max_err = std::max(max_err, fabs(delta * __ode.options.inv_absolute_error[i]));
             }
-            _ode._state[_N] = t0 + dt_2;
 
-            __ode.dynamics(__ode._state, __ode._state_rate);
-            memcpy(k3.data(), ode._state_rate, bytes);
+            constexpr Float dt_factor = 0.9;
+            __ode._dt *= dt_factor * std::min(std::max(1.0 / max_err, 0.2), 2.0);
 
+            if (max_err < 1.0)
+            {
+                break;
+            }
+        }
+    }
+
+    static void rk23_step(ode& __ode)
+    {
+        Float* x0 = __ode._state + _N;
+        Float* k2 = __ode._state_rate + _N;
+        Float* k3 = k2 + _N;
+        Float* k4 = k3 + _N;
+        Float* z = x0 + _N;
+
+        const Float t0 = __ode._time;
+        memcpy(x0, __ode._state, __ode._state_bytes);
+        memcpy(__ode._state_rate, k4, __ode._state_bytes); // FSAL
+
+        constexpr unsigned MAX_ITER = 10u;
+        for (unsigned _ = 0; _ < MAX_ITER; _++)
+        {
+            Float dt = __ode._dt * static_cast<Float>(0.5);
             for (unsigned i = 0; i < _N; i++)
             {
-                __ode._state[i] = dx0[i] + k2[i] * __ode._state_rate[_N];
+                __ode._state[i] = x0[i] + __ode._state_rate[i] * dt;
             }
-            _ode._state[_N] = t0 + __ode._state_rate[_N];
+            _ode._time = t0 + dt;
+
+            __ode.dynamics(__ode._state, _ode._time, k2);
+            dt = __ode._dt * static_cast<Float>(0.75);
+            for (unsigned i = 0; i < _N; i++)
+            {
+                __ode._state[i] = x0[i] + k2[i] * dt;
+            }
+            _ode._time = t0 + dt;
+
+            __ode.dynamics(__ode._state, _ode._time, k3);
+
+            _ode._time = t0 + __ode._dt;
+
+            dt = __ode._dt * static_cast<Float>(0.333333333333333333333);
+            for (unsigned i = 0; i < _N; i++)
+            {
+                __ode._state[i] = x0[i] + ((__ode._state_rate[i] + k2[i] + k3[i]) + 
+                    (k3[i] - __ode._state_rate[i]) * static_cast<Float>(0.333333333333333333333)) * dt;
+            }
+
+            __ode.dynamics(__ode._state, _ode._time, k4);
+
+            Float dt_1 = __ode._dt * static_cast<Float>(0.29166666666666666666666666666);
+            Float dt_2 = __ode._dt * static_cast<Float>(0.25);
+            Float dt_4 = __ode._dt * static_cast<Float>(0.125);
+            for (unsigned i = 0; i < _N; i++)
+            {
+                z[i] = x0[i] + (__ode._state_rate[i] * dt_1 + k2[i] * dt_2 + k3[i] * dt + k4[i] * dt_4);
+            }
+
+            dt_1 = 0.0;
+            for (unsigned i = 0; i < _N; i++)
+            {
+                dt_2 = fabs( (z[i] - __ode._state[i])*__ode.options.inv_absolute_error[i] );
+                dt_1 = std::max(dt_1, dt_2);
+            }
+
+            constexpr Float dt_factor = 0.9;
+            __ode._dt *= dt_factor * std::min(std::max( 1.0/dt_2, 0.2), 2.0);
+
+            if (dt_1 < 1.0)
+            {
+                break;
+            }
         }
     }
 
@@ -248,8 +312,6 @@ public:
 
     ode() : _N(T.get_num_states()),
         _state_bytes(_N*sizeof(Float)),
-        _state(new Float[_N]),
-        _state_rate(new Float[_N]),
         options(_N)
     {}
 
@@ -275,28 +337,24 @@ public:
         void (*step)(ode&) = &ode::euler_step;
         switch (options.step)
         {
-        case HUEN:
-            step = &ode::huen_step;
-            this->_k = new Float[_N];
-            break;
-        case RK4:
-            step = &ode::rk4_step;
-            this->_k = new Float[_N*4];
-            break;
-        case RK23:
-            step = &ode::rk23_step;
-            this->_k = new Float[_N*4];
-            break;
+            case HUEN:
+                step = &ode::huen_step;
+                this->_state_rate = new Float[_N];
+                break;
+            case RK4:
+                step = &ode::rk4_step;
+                this->_state_rate = new Float[_N*5];
+                break;
+            case RK23:
+                step = &ode::rk23_step;
+                this->_state_rate = new Float[_N*5];
+                __ode.dynamics(options.initial_state.data(), __ode._state_rate);
+                break;
         }
 
-        recording record;
-        unsigned nRecordings = static_cast<unsigned>(
-            (options.end_time - options.start_time) / options.record_interval
-            ) + 2u;
-        record.times.reserve(nRecordings);
-        record.states.reserve(nRecordings);
+        recording record(options);
 
-        memcpy(_state, options.initial_state, _state_bytes);
+        memcpy(_state, options.initial_state.data(), _state_bytes);
         _time = options.start_time;
         _dt = options.initial_time_step;
 
