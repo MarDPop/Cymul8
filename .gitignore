@@ -1,6 +1,7 @@
 /bin
 /obj
 *.o
+*.vsidx
 *.a
 *.save
 *.log

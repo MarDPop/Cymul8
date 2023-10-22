@@ -71,7 +71,14 @@ Note on constants:
     - for Plane Symmetry the plane is assumed to be in the XZ axis
     - for Axisymmetric the axis is assumed to be on the Z axis
 */
-enum MOMENT_CONSTANTS {EQUAL = 1u, AXISYMMETRIC = 2u, PRINCIPAL_AXIS = 3u, PLANE_SYMMETRY = 4u, FULL = 6u};
+enum class MOMENT_CONSTANTS : unsigned 
+{
+    EQUAL = 1u, 
+    AXISYMMETRIC = 2u, 
+    PRINCIPAL_AXIS = 3u, 
+    PLANE_SYMMETRY = 4u, 
+    FULL = 6u
+};
 
 
 template<MOMENT_CONSTANTS NDEG>
@@ -93,7 +100,7 @@ struct MomentOfInertia
 };
 
 template<>
-inline Eigen::Matrix3d MomentOfInertia<FULL>::get_inertia_matrix() const
+inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_inertia_matrix() const
 {
     Eigen::Matrix3d inertia;
     double* data = inertia.data();
@@ -107,7 +114,7 @@ inline Eigen::Matrix3d MomentOfInertia<FULL>::get_inertia_matrix() const
 }
 
 template<>
-inline Eigen::Matrix3d MomentOfInertia<PLANE_SYMMETRY>::get_inertia_matrix() const
+inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_inertia_matrix() const
 {
     Eigen::Matrix3d inertia;
     double* data = inertia.data();
@@ -121,7 +128,7 @@ inline Eigen::Matrix3d MomentOfInertia<PLANE_SYMMETRY>::get_inertia_matrix() con
 }
 
 template<>
-inline Eigen::Matrix3d MomentOfInertia<PRINCIPAL_AXIS>::get_inertia_matrix() const
+inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_inertia_matrix() const
 {
     Eigen::Matrix3d inertia;
     double* data = inertia.data();
@@ -134,7 +141,7 @@ inline Eigen::Matrix3d MomentOfInertia<PRINCIPAL_AXIS>::get_inertia_matrix() con
 }
 
 template<>
-inline Eigen::Matrix3d MomentOfInertia<AXISYMMETRIC>::get_inertia_matrix() const
+inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_inertia_matrix() const
 {
     Eigen::Matrix3d inertia;
     double* data = inertia.data();
@@ -146,7 +153,7 @@ inline Eigen::Matrix3d MomentOfInertia<AXISYMMETRIC>::get_inertia_matrix() const
 }
 
 template<>
-inline Eigen::Matrix3d MomentOfInertia<EQUAL>::get_inertia_matrix() const
+inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_inertia_matrix() const
 {
     Eigen::Matrix3d inertia;
     double* data = inertia.data();
@@ -181,9 +188,9 @@ struct Inertia
         memcpy(this->moment_of_inertia.I.data(),inertia.moment_of_inertia.I.data(),NDEG*sizeof(double));
     }
 
-    inline Inertia<FULL> operator+(const Inertia<NDEG>& inertia) const
+    inline Inertia<MOMENT_CONSTANTS::FULL> operator+(const Inertia<NDEG>& inertia) const
     {
-        Inertia<FULL> output;
+        Inertia<MOMENT_CONSTANTS::FULL> output;
 
         // Get mass first
         output.mass = this->mass + inertia.mass;

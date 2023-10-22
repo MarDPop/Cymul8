@@ -644,7 +644,7 @@ class ODE_Huen : public virtual ODE
         double half_step = 0.5 * this->_time_step;
         for (unsigned i = 0; i < NSTATES; i++)
         {
-            this->_state[i] = initial_state[i] + (this->_state_rate[i] + initial_state_rate[i]) * half_step;
+            this->_state[i] = _initial_state[i] + (this->_state_rate[i] + _initial_state_rate[i]) * half_step;
         }
 
         return valid;

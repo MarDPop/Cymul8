@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 
 namespace fmath
@@ -34,4 +36,12 @@ namespace fmath
         u.dbl *= u.dbl;                 // pow( pow(x,-0.5), 2 ) = pow( x, -1 ) = 1.0/x
         return u.dbl * y;               // (1.0/x) * y = y/x
     }
+
+    template<typename T>
+    inline T constexpr dot3(const T* u, const T* v)
+    {
+        return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+    }
+
+
 }

@@ -1,43 +1,38 @@
 #pragma once
 
-#include "../physics/Body.h"
-
 #include "GNC.h"
-#include "Action.h"
-#include "../physics/Stage.h"
+#include "../physics/Environment.h"
 
 #include <memory>
 
-#include "../../lib/Eigen/Dense"
-
-class Vehicle_3DOF : public virtual Body_Point_Mass
+class Vehicle
 {
+protected:
+    friend class Environment;
 
-    std::vector<Eigen::Vector3d*> _forces;
-
-public:
-
-    inline Vehicle_3DOF(){}
-
-};
-
-
-template<class T, unsigned N_ACTIONS>
-class Vehicle : public virtual T
-{
-
-    std::array<BodyAction*, N_ACTIONS> _actions;
-
-    GNC _gnc;
+    std::unique_ptr<GNC> _gnc;
 
     Environment _environment;
 
-    BodyAction _action_sum;
-
 public:
 
-    inline Vehicle(){}
+    Vehicle(){}
 
+    virtual ~Vehicle() {}
+
+    void set_gnc(std::unique_ptr<GNC> gnc)
+    {
+        _gnc = std::move(gnc);
+    }
+
+    GNC& get_gnc()
+    {
+        return *_gnc;
+    }
+
+    const GNC& get_gnc() const
+    {
+        return *_gnc;
+    }
 };
-
 

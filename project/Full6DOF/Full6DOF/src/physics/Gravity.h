@@ -3,6 +3,7 @@
 #include "../../lib/Eigen/Dense"
 
 #include "Time.h"
+#include "Coordinates.h"
 
 #include <vector>
 #include <memory>
@@ -11,24 +12,13 @@
  * @brief 
  * 
  */
-class Gravity
+struct Gravity : public virtual Eigen::Vector3d
 {
 
-public:
-
-    virtual void set_time(EpochTime time) {}
-
-    virtual void get_acceleration(const Eigen::Vector3d& position, double* acceleration) const = 0;
-
-    inline Eigen::Vector3d get_acceleration(const Eigen::Vector3d& position)
-    {
-        Eigen::Vector3d acceleration;
-        this->get_acceleration(position,acceleration.data());
-        return acceleration;
-    }
-
+    virtual void compute(   const double* position,
+                            const double R,
+                            const double T) = 0;
 };
-
 
 class Multi_Gravity : public virtual Gravity
 {
@@ -37,9 +27,9 @@ class Multi_Gravity : public virtual Gravity
 
 public:
 
-    inline Multi_Gravity() {}
+    Multi_Gravity() {}
 
-    inline void add_gravity(std::unique_ptr<Gravity>& gravity)
+    void add_gravity(std::unique_ptr<Gravity>& gravity)
     {
         this->_gravities.push_back(std::move(gravity));
     }

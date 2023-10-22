@@ -3,6 +3,5 @@
 
 #pragma once
 
-#include <iostream>
-
+int main(int argc, char** argv);
 // TODO: Reference additional headers your program requires here.
