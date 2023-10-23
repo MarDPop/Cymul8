@@ -4,6 +4,18 @@
 
 namespace fmath
 {
+    template<typename T>
+    T SQ(T x)
+    {
+        return x*x;
+    }
+
+    template<typename T>
+    T CB(T x)
+    {
+        return x*x*x;
+    }
+
     float inv_fast(float x) {
         union { float f; int i; } v;
         float w, sx;

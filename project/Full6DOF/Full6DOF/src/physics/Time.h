@@ -142,6 +142,11 @@ public:
         return LEAP_SECONDS_UTC[_leap_idx];
     }
 
+    inline double to_modified_julian_date() const
+    {
+        return this->_mjdn + this->_day_sec * SEC_2_DAY_FRACTION;
+    }
+
     inline double to_julian_date() const
     {
         return static_cast<double>(this->_mjdn) + (this->_day_sec*SEC_2_DAY_FRACTION + MJD_JULIAN_DATE);

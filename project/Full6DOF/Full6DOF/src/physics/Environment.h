@@ -13,15 +13,18 @@ public:
 
     enum STATE
     {
-        LOCAL = 0,
-        FLYING_HIGH,
-        LEO,
-        HEO,
-        CISLUNAR
+        NONE = -1,
+        LAUNCH_LANDING = 0,
+        ATMOSPHERIC,
+        LOW_ORBIT,
+        HIGH_ORBIT,
+        INTERPLANETARY
     };
 
 private:
     const Vehicle& _vehicle;
+
+    Planet _current_planet;
 
     Coordinate::ECI _ECI;
 
@@ -38,12 +41,6 @@ private:
     Coordinate::Geodetic _launch_lla;
 
     STATE _current_state;
-
-    std::unique_ptr<Gravity> gravity;
-
-    std::unique_ptr<Atmosphere> atmosphere;
-
-    std::unique_ptr<Geometry> geometry;
 
 public:
 
