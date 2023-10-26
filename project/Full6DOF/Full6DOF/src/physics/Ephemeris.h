@@ -2,6 +2,7 @@
 
 #include "Time.h"
 #include "../util/fast_math.h"
+#include "../util/Table.h"
 
 #include <array>
 #include <vector>
@@ -83,13 +84,17 @@ struct Ephemeris
 };
 
 
-class EphemerisHistory 
+class EphemerisHistory
 {
     double _MU = 1.0;
 
-    std::vector<std::array<double,6>> _ephemeris;
+    std::vector<std::array<double, 6>> _ephemeris;
+
+    std::vector<std::array<double, 6>> _dephemeris;
 
     std::vector<double> _mjd;
+
+
 
 public:
 
@@ -111,6 +116,12 @@ public:
         else
         {
             auto it = std::lower_bound(_mjd.begin(), _mjd.end(), mjd);
+            auto idx = std::distance(_mjd.begin(), it);
+            double delta 
+
+            interpolated.elements = _ephemeris[idx];
+
+            interpolated.true_anomaly = Ephemeris::trueAnomalyFromMeanAnomaly(MA, interpolated.eccentricity);
         }
 
         return interpolated;
