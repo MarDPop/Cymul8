@@ -94,8 +94,6 @@ class EphemerisHistory
 
     std::vector<double> _mjd;
 
-
-
 public:
 
     Ephemeris get_at_time(double mjd)
@@ -117,7 +115,7 @@ public:
         {
             auto it = std::lower_bound(_mjd.begin(), _mjd.end(), mjd);
             auto idx = std::distance(_mjd.begin(), it);
-            double delta 
+            double delta = mjd - *it;
 
             interpolated.elements = _ephemeris[idx];
 

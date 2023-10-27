@@ -1,226 +1,349 @@
 #pragma once
 
 #include <exception>
+#include <algorithm>
+#include <vector>
+#include <array>
 
+template<typename Float, unsigned NCOLS>
 class Table
 {
+	std::vector<Float> _x;
+
+	std::vector<std::array<Float, NCOLS>> _v;
+
+	std::array<Float, NCOLS> interpolate(Float x) const
+	{
+		auto it = std::lower_bound(_x.begin(), _x.end(), x);
+		auto idx = std::distance(_x.begin(), it);
+		std::array<Float, NCOLS> p1;
+		if (interp > 1)
+		{
+			p1 = _v[idx + interp];
+		}
+		else
+		{
+			auto dx = *(it + 1) - *it;
+			auto delta = x - *it;
+			if (interp == NEAREST)
+			{
+				p1 = _v[idx + (static_cast<Float>(2.0)*delta > dx)];
+			}
+			else
+			{
+				auto delta /= dx;
+				p1 = _v[idx];
+				const auto& p2 = _v[idx + 1];
+				switch (interp)
+				{
+				case LINEAR:
+					for (auto i = 0u; i < NCOLS; i++)
+					{
+						p1[i] += (p2[i] - p1[i])*delta;
+					}
+					break;
+				case CUBIC:
+					const auto& p0 = _v[idx - (idx > 0)];
+					const auto& p3 = _v[idx + 1 + (idx < (_x.size() - 2))];
+					const auto halfx = 0.5*delta;
+					for (auto j = 0u; j < NCOLS; j++)
+					{
+						p1[j] += halfx*(p2[j] - p0[j] +
+							delta*(2.0*p0[j] - 5.0*p1[j] + 4.0*p2[j] - p3[j] + 
+								delta*(3.0*(p1[j] - p2[j]) + p3[j] - p0[j])));
+					}
+					break;
+				}
+				
+			}
+			
+		}
+		return p1;
+	}
+
+	std::array<Float, NCOLS> extrapolate(Float x, Float dx) const
+	{
+		
+		unsigned idx = (dx > 0) * (_x.size() - 2);
+		dx /= (_x[idx + 1] - _x[idx]);
+		std::array<Float, NCOLS> p1 = _v[idx];
+		const auto& p2 = _v[idx + 1];
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			p1[i] += (p2[i] - p1[i])*dx;
+		}
+		return p1;
+	}
 
 public:
 
+	enum INTERPOLATION
+	{
+		FLOOR = 0,
+		CEIL,
+		NEAREST,
+		LINEAR,
+		CUBIC
+	};
+
+	enum EXTRAPOLATION
+	{
+		HOLD_LAST_VALUE = 0,
+		LINEAR
+	};
+
+	Table() {}
+
+	void set(unsigned idx, const Float& x, const std::array<Float, NCOLS>& v)
+	{
+		if (idx > _x.size())
+		{
+			_x.resize(idx);
+			_v.resize(idx);
+		}
+		_x[idx] = x;
+		_v[idx] = v;
+	}
+
+	void add(const Float& x, const std::array<Float, NCOLS>& v)
+	{
+		_x.push_back(x);
+		_v.push_back(v);
+	}
+
+	std::array<Float, NCOLS> get(Float x, 
+									INTERPOLATION interp = LINEAR,
+									EXTRAPOLATION extrap = HOLD_LAST_VALUE) const
+	{
+		if (x < _x[0])
+		{
+			if (extrap == HOLD_LAST_VALUE)
+			{
+				return _v[0];
+			}
+			return this->extrapolate(x, x - _x[0]);
+		}
+		if (x > _x.back())
+		{
+			if (extrap == HOLD_LAST_VALUE)
+			{
+				return _v.back();
+			}
+			return this->extrapolate(x, x - _x.back());
+		}
+		return this->interpolate(x);
+	}
 };
 
-template<typename Float>
+template<typename Float, unsigned NROWS, unsigned NCOLS>
 class LinearTable
 {
-	Float* _x;
+	Float _x[NROWS];
 
-	Float* _v;
+	Float _v[NROWS][NCOLS];
 
-	Float* _dv;
+	Float _dv[NROWS][NCOLS];
 
-	unsigned _length;
+	constexpr std::size_t ROW_BYTES = NCOLS * sizeof(Float);
+
+	void finish()
+	{
+		auto* v = _v;
+		auto* dv = _dv;
+		for (auto i = 1u; i < NROWS; i++)
+		{
+			auto dx = 1.0 / (_x[i] - _x[i - 1]);
+			for (auto j = 0u; j < NCOLS; j++)
+			{
+				dv[j] = (v[j + NCOLS] - v[j]) * dx;
+			}
+		}
+	}
 
 public:
 
-	LinearTable(unsigned n) : _length(n)
+	void set(const Float* x, const Float* v)
 	{
-		_x = new Float[n];
-		_v = new Float[n];
-		_dv = new Float[n];
+		memcpy(_x, x, NROWS*sizeof(Float));
+		memcpy(_v, v, NROWS*ROW_BYTES);
+		finish();
 	}
 
-	LinearTable(const Float* const x, const Float* const v, unsigned n)
+	void set(const std::vector<Float>& x, const std::vector<std::array<Float,NCOLS>>& v)
 	{
-		_x = new Float[n];
-		_v = new Float[n];
-		_dv = new Float[n];
-		auto bytes = n*sizeof(Float);
-		memcpy(_x, x, bytes);
-		memcpy(_v, v, bytes);
-		for (auto i = 1u; i < n; i++)
-		{
-			_dv[i - 1] = (_v[i] - _v[i - 1]) / (_x[i] - _x[i - 1]);
-		}
+		assert(x.size() >= NROWS && v.size() >= NROWS);
+		memcpy(_x, x.data(), NROWS * sizeof(Float));
+		memcpy(_v, &v[0][0], NROWS * ROW_BYTES);
+		finish();
 	}
 
-	~LinearTable()
-	{
-		delete[] _x;
-		delete[] _v;
-		delete[] _dx;
-	}
-
-	/**
-	* Don't use this 
-	*/
-	void add(const Float x, const Float v)
-	{
-		auto i = _length++;
-		auto bytes = _length * sizeof(Float);
-		Float* _tmp_x = _x;
-		Float* _tmp_v = _v;
-		Float* _tmp_dv = _dv;
-		_x = realloc(_x, bytes);
-		_v = realloc(_v, bytes);
-		_dv = realloc(_dv, bytes);
-		if (!dv)
-		{
-			_x = _tmp_x;
-			_v = _tmp_v;
-			_dv = _tmp_dv;
-			_length--;
-			throw std::runtime_error("Couldn't reserve memory");
-		}
-
-		_x[i] = x;
-		_v[i] = v;
-		_dv[i - 1] = (_v[i] - _v[i - 1]) / (_x[i] - _x[i - 1]);
-	}
-
-	void set(unsigned i, const Float x, const Float v)
-	{
-		assert(i < _length);
-		_x[i] = x;
-		_v[i] = v;
-		if (i != _length - 1)
-		{
-			_dv[i] = (_v[i + 1] - _v[i]) / (_x[i + 1] - _x[i]);
-		}
-	}
-
-	Float get(Float x)
+	void get(Float x, Float* v) const
 	{
 		auto it = std::lower_bound(_x, _x + _length, x);
 		auto delta = x - *it;
 		auto idx = it - _x;
-		return _v[idx] + delta*_dv[idx];
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			v[i] = _v[i] + delta*_dv[i];
+		}
 	}
 
 };
 
 template<typename Float>
-class CubicTable
+class DynamicTable
 {
+	Float* const _x;
 
-	Float* _x;
+	Float* const _v;
 
-	Float* _v;
+	Float* _p;
 
-	Float* _dv;
+	void (DynamicTable::*_interpolate)(Float, Float*);
+
+	void (DynamicTable::*_finish)(void);
 
 public:
 
-};
+	const unsigned NROWS;
 
-template<typename Float, unsigned N>
-class LinearTable
-{
-	Float* _x;
+	const unsigned NCOLS;
 
-	Float* _v;
+	const unsigned ROW_BYTES;
 
-	Float* _dv;
-
-	unsigned _length;
-
-	constexpr ROW_BYTES = N * sizeof(Float);
-
-public:
-
-	LinearTable(unsigned n) : _length(n)
+	DynamicTable(	unsigned __NROWS,
+					unsigned __NCOLS,
+					Table::INTERPOLATION method) : 
+		NROWS(__NROWS),
+		NCOLS(__NCOLS),
+		ROW_BYTES(__NCOLS*sizeof(Float)),
+		_x(new Float[__NROWS]),
+		_v(new Float[__NROWS*__NCOLS])
 	{
-		_x = new Float[n];
-		_v = new Float[n*N];
-		_dv = new Float[n*N];
-	}
-
-	LinearTable(const Float* const x, const Float* const v, unsigned n)
-	{
-		_x = new Float[n];
-		_v = new Float[n*N];
-		_dv = new Float[n*N];
-
-		memcpy(_x, x, n*sizeof(Float));
-		memcpy(_v, v, n*ROW_BYTES);
-		
-		auto dv_ = _dv;
-		auto v_ = _v;
-		for (auto i = 1u; i < n; i++)
+		switch (method)
 		{
-			auto den = static_cast<Float>(1.0) / (_x[i] - _x[i - 1]);
-			for (auto j = 0u; j < N; j++)
-			{
-				dv_[j] = (v_[N + j] - v_[j])*den;
-				dv_ += N;
-				v_ += N;
-			}
-			
+		case NEAREST:
+			_p = new Float[__NROWS];
+			_finish = &Table::finish_nearest();
+			_interpolate = &Table::interpolate_nearest();
+			break;
+		case LINEAR:
+			_p = new Float[__NROWS * __NCOLS];
+			_finish = &Table::finish_linear();
+			_interpolate = &Table::interpolate_nearest();
+			break;
+		case CUBIC:
+			_p = new Float[__NROWS * __NCOLS * 3];
+			_finish = &Table::finish_cubic();
+			_interpolate = &Table::interpolate_nearest();
+			break;
+		default:
+			_p = nullptr;
+			break;
 		}
 	}
 
-	~LinearTable()
+	~DynamicTable()
 	{
 		delete[] _x;
 		delete[] _v;
-		delete[] _dx;
+		delete[] _p;
 	}
 
-	/**
-	* Don't use this
-	*/
-	void add(Float x, Float* v)
+	void set(const Float* x, const Float* v)
 	{
-		auto i = _length++;
-		auto bytes = _length * sizeof(Float);
-		Float* _tmp_x = _x;
-		Float* _tmp_v = _v;
-		Float* _tmp_dv = _dv;
-		_x = realloc(_x, _length*sizeof(Float));
-		_v = realloc(_v, _length*N*sizeof(Float));
-		_dv = realloc(_dv, _length*N*sizeof(Float));
-		if (!dv)
+		memcpy(_x, x, NROWS * sizeof(Float));
+		memcpy(_v, v, NROWS * ROW_BYTES);
+		finish(_p, _x, _v);
+	}
+
+	void set(const std::vector<Float>& x, const std::vector<std::array<Float, NCOLS>>& v)
+	{
+		assert(x.size() >= NROWS && v.size() >= NROWS);
+		memcpy(_x, x.data(), NROWS * sizeof(Float));
+		memcpy(_v, &v[0][0], NROWS * ROW_BYTES);
+		finish(_p, _x, _v);
+	}
+
+	void get(Float x, Float* v) const
+	{
+		if (x < _x[0])
 		{
-			_x = _tmp_x;
-			_v = _tmp_v;
-			_dv = _tmp_dv;
-			_length--;
-			throw std::runtime_error("Couldn't reserve memory");
+
 		}
+		if (x > _x.back())
+		{
 
-		_x[i] = x;
-		memcpy(_v + i * N, v, ROW_BYTES);
-		_dv[i - 1] = (_v[i] - _v[i - 1]) / (_x[i] - _x[i - 1]);
+		}
+		_interpolate(x, v);
 	}
 
-	void set(unsigned i, const Float x, const Float* const v)
+private:
+
+	void finish_nearest()
 	{
-		assert(i < _length);
-		_x[i] = x;
-		auto v_ = = _v + i * N;
-		memcpy(v_, v, ROW_BYTES);
-		if (i != _length - 1)
+		for (auto i = 1u; i < NROWS; i++)
 		{
-			auto dv_ = _dv + i*N;
-			
-			auto den = static_cast<Float>(1.0) / (_x[i + 1] - _x[i]);
-			for (auto j = 0u; j < N; j++)
+			_p[i - 1] = 0.5*(_x[i] + _x[i - 1]);
+		}
+	}
+
+	void finish_linear()
+	{
+		auto* v = _v;
+		auto* dv = _p;
+		for (auto i = 1u; i < NROWS; i++)
+		{
+			auto dx = 1.0 / (_x[i] - _x[i - 1]);
+			for (auto j = 0u; j < NCOLS; j++)
 			{
-				dv_[j] = (v_[N + j] - v_[j]) * den;
+				dv[j] = (v[j + NCOLS] - v[j]) * dx;
 			}
 		}
 	}
 
-	void get(Float x, Float* v)
+	void finish_cubic()
 	{
-		auto it = std::lower_bound(_x, _x + _length, x);
-		auto delta = x - *it;
-		auto idx = (it - _x)*N;
-		auto v_ = = _v + idx;
-		auto dv_ = = _dv + idx;
-		for (auto j = 0u; j < N; j++)
+		auto* v = _v;
+		auto* p = _p;
+		for (auto i = 1u; i < NROWS; i++)
 		{
-			v[j] = v_[j] + delta * dv_[j];
-		} 
+			
+		}
 	}
 
+	void interpolate_nearest(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = (it - _x);
+		idx += (x > _p[idx]);
+		memcpy(v, _v + idx*NCOLS, ROW_BYTES);
+	}
+
+	void interpolate_linear(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = static_cast<unsigned>(it - _x)*NCOLS;
+		const auto* __v = _v + idx;
+		const auto* __p = _p + idx;
+		const auto delta = x - *it;
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			v[j] = __v[j] + delta * __p[j];
+		}
+
+	}
+
+	void interpolate_cubic(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = static_cast<unsigned>(it - _x) * NCOLS;
+		const auto* __v = _v + idx;
+		const auto* __p = _p + idx;
+		const auto delta = x - *it;
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			v[j] = __v[j] + delta * __p[j];
+		}
+	}
 };
