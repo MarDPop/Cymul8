@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <array>
+#include "fast_math.h"
 
 template<typename Float, unsigned NCOLS>
 class Table
@@ -323,38 +324,42 @@ private:
 		auto* p = _p;
 
 		const auto NEXT_ROW = 2 * NCOLS;
-		const auto LAST_ROW = 3 * NCOLS;
 
-		Float A[9] = {0,0,1,0,1,0,0,1,0};
-
-		Float A_inv[9];
-		Float y[3];
+		Float A[4];
+		Float A_inv[4];
+		Float y[2];
 		
-		auto dx0 = 1.0;
-		auto dx1 = 1.0 / (_x[1] - _x[0]);
-		auto dx2 = 1.0 / (_x[2] - _x[1]);
+		auto half_dx0 = 1.0;
+		auto half_dx1 = 0.5 / (_x[1] - _x[0]);
+		auto half_dx2 = 0.5 / (_x[2] - _x[1]);
 
 		p += ncoefs;
-
+		v += NCOLS;
 		for (auto i = 1u; i < NROWS - 1; i++)
 		{
-			auto dx = _x[1] - _x[0];
+			auto dx = _x[i + 1] - _x[i];
 			auto dx_sq = dx*dx;
-			auto twodx = 2*dx;
-			auto dx0 = dx1;
-			auto dx1 = dx2;
-			auto dx2 = 1.0 / (_x[i + 2] - _x[i + 1]);
+			half_dx0 = half_dx1;
+			half_dx1 = half_dx2;
+			half_dx2 = 0.5 / (_x[i + 2] - _x[i + 1]);
 
-			A[0] = dx_sq;
-			A[1] = dx;
-			A[3] = twodx;
+			A[0] = dx_sq*dx;
+			A[1] = dx_sq;
+			A[2] = 3.0*dx_sq;
+			A[3] = 2.0*dx;
+			inverse2x2(A, A_inv);
 			for (auto j = 0u; j < NCOLS; j++)
 			{
-				dvdx0 = v[j + NCOLS] - v[j];
-				dvdx1 = v[j + NEXT_ROW] - v[j + NCOLS];
-				dvdx2 = v[j + LAST_ROW] - v[j + NEXT_ROW];
+				auto dvdx0 = (v[j] - v[j - NCOLS])*dx0;
+				auto dvdx1 = (v[j + NCOLS] - v[j])*dx1;
+				auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS])*dx2;
 
-				y[0] = v[j + NCOLS];
+				p[2] = dvdx1 + dvdx0; // c or dvdx at point x1
+
+				y[0] = (_v[j + NCOLS] - p[2]*dx - _v[j];
+				y[1] = (dvdx2 + dvdx1) - p[2];
+
+				mult2x2(A_inv, y, p);
 
 				p += NCOEF_CUBIC;
 			}
@@ -390,10 +395,12 @@ private:
 		auto idx = static_cast<unsigned>(it - _x) * NCOLS;
 		const auto* __v = _v + idx;
 		const auto* __p = _p + idx;
-		const auto delta = x - *it;
+		const auto dx = x - *it;
+		// could be vaster with simd and precomputing dx^2 dx^3
 		for (auto j = 0u; j < NCOLS; j++)
 		{
-			v[j] = __v[j] + delta * __p[j];
+			v[j] = __v[j] + dx * (__p[2] + dx * (__p[1] + dx * __p[0]);
+			__p += NCOEF_CUBIC;
 		}
 	}
 };

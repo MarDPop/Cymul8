@@ -50,9 +50,26 @@ namespace fmath
     }
 
     template<typename T>
-    inline void inverse3x3(const T* A, T* inv)
+    inline T constexpr dot2(const T* u, const T* v)
     {
+        return u[0] * v[0] + u[1] * v[1];
+    }
 
+    template<typename T>
+    inline void inverse2x2(const T* A, T* inv)
+    {
+        T det = 1.0 / (A[0]*A[3] - A[1]*A[2]);
+        inv[0] = A[3] * det;
+        inv[1] = -A[1] * det;
+        inv[2] = -A[2] * det;
+        inv[3] = A[0] * det;
+    }
+
+    template<typename T>
+    inline void mult2x2(const T* A, const T* x, T* y)
+    {
+        y[0] = dot2(A, x);
+        y[1] = dot2(A + 2, x);
     }
 
     template<typename T>
