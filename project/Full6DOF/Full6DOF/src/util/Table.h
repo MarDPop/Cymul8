@@ -203,6 +203,8 @@ class DynamicTable
 
 	void (DynamicTable::*_finish)(void);
 
+	constexpr unsigned NCOEF_CUBIC = 3;
+
 public:
 
 	const unsigned NROWS;
@@ -220,6 +222,15 @@ public:
 		_x(new Float[__NROWS]),
 		_v(new Float[__NROWS*__NCOLS])
 	{
+		if (method == CUBIC && __NROWS < 4)
+		{
+			method = _NROWS > 1 ? LINEAR : FLOOR;
+		}
+		if (method == LINEAR && __NROWS < 2)
+		{
+			method = FLOOR;
+		}
+
 		switch (method)
 		{
 		case NEAREST:
@@ -233,7 +244,7 @@ public:
 			_interpolate = &Table::interpolate_nearest();
 			break;
 		case CUBIC:
-			_p = new Float[__NROWS * __NCOLS * 3];
+			_p = new Float[__NROWS * __NCOLS * NCOEF_CUBIC];
 			_finish = &Table::finish_cubic();
 			_interpolate = &Table::interpolate_nearest();
 			break;
@@ -304,11 +315,50 @@ private:
 
 	void finish_cubic()
 	{
+		if (NROWS < 3)
+		{
+			finish_linear();
+		}
 		auto* v = _v;
 		auto* p = _p;
-		for (auto i = 1u; i < NROWS; i++)
+
+		const auto NEXT_ROW = 2 * NCOLS;
+		const auto LAST_ROW = 3 * NCOLS;
+
+		Float A[9] = {0,0,1,0,1,0,0,1,0};
+
+		Float A_inv[9];
+		Float y[3];
+		
+		auto dx0 = 1.0;
+		auto dx1 = 1.0 / (_x[1] - _x[0]);
+		auto dx2 = 1.0 / (_x[2] - _x[1]);
+
+		p += ncoefs;
+
+		for (auto i = 1u; i < NROWS - 1; i++)
 		{
-			
+			auto dx = _x[1] - _x[0];
+			auto dx_sq = dx*dx;
+			auto twodx = 2*dx;
+			auto dx0 = dx1;
+			auto dx1 = dx2;
+			auto dx2 = 1.0 / (_x[i + 2] - _x[i + 1]);
+
+			A[0] = dx_sq;
+			A[1] = dx;
+			A[3] = twodx;
+			for (auto j = 0u; j < NCOLS; j++)
+			{
+				dvdx0 = v[j + NCOLS] - v[j];
+				dvdx1 = v[j + NEXT_ROW] - v[j + NCOLS];
+				dvdx2 = v[j + LAST_ROW] - v[j + NEXT_ROW];
+
+				y[0] = v[j + NCOLS];
+
+				p += NCOEF_CUBIC;
+			}
+			v += NCOLS;
 		}
 	}
 
