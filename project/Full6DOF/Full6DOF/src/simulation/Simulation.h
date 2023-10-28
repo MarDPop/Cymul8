@@ -4,7 +4,6 @@
 
 #include "../../lib/tinyxml/tinyxml2.h"
 
-#include "../physics/Stage.h"
 #include "../vehicle/Vehicle.h"
 #include "../ode/ODE.h"
 
