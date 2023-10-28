@@ -4,20 +4,43 @@
 #include <algorithm>
 #include <vector>
 #include <array>
+#include <string>
 #include "fast_math.h"
 
-template<typename Float, unsigned NCOLS>
+template<typename Float>
 class Table
 {
+public:
+	const unsigned NCOLS;
+
+	enum INTERPOLATION
+	{
+		FLOOR = 0,
+		CEIL,
+		NEAREST,
+		LINEAR,
+		CUBIC
+	};
+
+	enum EXTRAPOLATION
+	{
+		HOLD_LAST_VALUE = 0,
+		LINEAR
+	};
+
+private:
+
+	std::vector<std::string> _column_names;
+
 	std::vector<Float> _x;
 
-	std::vector<std::array<Float, NCOLS>> _v;
+	std::vector<std::vector<Float>> _v;
 
-	std::array<Float, NCOLS> interpolate(Float x) const
+	std::vector<Float> interpolate(Float x) const
 	{
 		auto it = std::lower_bound(_x.begin(), _x.end(), x);
 		auto idx = std::distance(_x.begin(), it);
-		std::array<Float, NCOLS> p1;
+		std::vector<Float> p1(NCOLS);
 		if (interp > 1)
 		{
 			p1 = _v[idx + interp];
@@ -62,12 +85,11 @@ class Table
 		return p1;
 	}
 
-	std::array<Float, NCOLS> extrapolate(Float x, Float dx) const
+	std::vector<Float> extrapolate(Float x, Float dx) const
 	{
-		
 		unsigned idx = (dx > 0) * (_x.size() - 2);
 		dx /= (_x[idx + 1] - _x[idx]);
-		std::array<Float, NCOLS> p1 = _v[idx];
+		std::vector<Float> p1 = _v[idx];
 		const auto& p2 = _v[idx + 1];
 		for (auto i = 0u; i < NCOLS; i++)
 		{
@@ -78,25 +100,25 @@ class Table
 
 public:
 
-	enum INTERPOLATION
-	{
-		FLOOR = 0,
-		CEIL,
-		NEAREST,
-		LINEAR,
-		CUBIC
-	};
+	Table(unsigned __NCOLS) : 
+			NCOLS(__NCOLS),
+			_column_names(NCOLS)
+	{}
 
-	enum EXTRAPOLATION
+	const std::vector<std::string>& get_column_names()
 	{
-		HOLD_LAST_VALUE = 0,
-		LINEAR
-	};
+		return _column_names;
+	}
 
-	Table() {}
-
-	void set(unsigned idx, const Float& x, const std::array<Float, NCOLS>& v)
+	void set_column_name(unsigned idx, std::string name)
 	{
+		_column_names[idx] = name;
+	}
+
+	void set(unsigned idx, const Float& x, const std::vector<Float>& v)
+	{
+		assert(v.size() == NCOLS);
+
 		if (idx > _x.size())
 		{
 			_x.resize(idx);
@@ -106,13 +128,15 @@ public:
 		_v[idx] = v;
 	}
 
-	void add(const Float& x, const std::array<Float, NCOLS>& v)
+	void add(const Float& x, const std::vector<Float>& v)
 	{
+		assert(v.size() == NCOLS);
+
 		_x.push_back(x);
 		_v.push_back(v);
 	}
 
-	std::array<Float, NCOLS> get(Float x, 
+	std::vector<Float> get(Float x, 
 									INTERPOLATION interp = LINEAR,
 									EXTRAPOLATION extrap = HOLD_LAST_VALUE) const
 	{
@@ -194,19 +218,9 @@ public:
 template<typename Float>
 class DynamicTable
 {
-	Float* const _x;
-
-	Float* const _v;
-
-	Float* _p;
-
-	void (DynamicTable::*_interpolate)(Float, Float*);
-
-	void (DynamicTable::*_finish)(void);
+public:
 
 	constexpr unsigned NCOEF_CUBIC = 3;
-
-public:
 
 	const unsigned NROWS;
 
@@ -214,25 +228,229 @@ public:
 
 	const unsigned ROW_BYTES;
 
-	DynamicTable(	unsigned __NROWS,
-					unsigned __NCOLS,
-					Table::INTERPOLATION method) : 
-		NROWS(__NROWS),
-		NCOLS(__NCOLS),
-		ROW_BYTES(__NCOLS*sizeof(Float)),
-		_x(new Float[__NROWS]),
-		_v(new Float[__NROWS*__NCOLS])
+	const unsigned LAST_IDX;
+
+private: 
+	void (DynamicTable::* _extrapolate)(Float, Float*);
+
+	void (DynamicTable::* _interpolate)(Float, Float*);
+
+	void (DynamicTable::* _finish)(void);
+
+	Float* const _x;
+
+	Float* const _v;
+
+	Float* _p;
+
+	void finish_nearest()
 	{
-		if (method == CUBIC && __NROWS < 4)
+		for (auto i = 1u; i < NROWS; i++)
 		{
-			method = _NROWS > 1 ? LINEAR : FLOOR;
+			_p[i - 1] = 0.5 * (_x[i] + _x[i - 1]);
 		}
-		if (method == LINEAR && __NROWS < 2)
+	}
+
+	void finish_linear()
+	{
+		auto* v = _v;
+		auto* dv = _p;
+		for (auto i = 1u; i < NROWS; i++)
 		{
-			method = FLOOR;
+			auto dx = 1.0 / (_x[i] - _x[i - 1]);
+			for (auto j = 0u; j < NCOLS; j++)
+			{
+				*dv++ = (*(v + NCOLS) - *v) * dx;
+				v++;
+			}
+		}
+	}
+
+	void finish_cubic()
+	{
+		if (NROWS < 3)
+		{
+			finish_linear();
+		}
+		auto* v = _v;
+		auto* p = _p;
+
+		const auto NEXT_ROW = 2 * NCOLS;
+
+		Float A[4];
+		Float A_inv[4];
+		Float y[2];
+
+		// First Entry
+		auto half_dx0 = 1.0;
+		auto half_dx1 = 0.5 / (_x[1] - _x[0]);
+		auto half_dx2 = 0.5 / (_x[2] - _x[1]);
+
+		auto dx = _x[1] - _x[0];
+		auto dx_sq = dx * dx;
+
+		A[0] = dx_sq * dx;
+		A[1] = dx_sq;
+		A[2] = 3.0 * dx_sq;
+		A[3] = 2.0 * dx;
+		inverse2x2(A, A_inv);
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
+			auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * dx2;
+
+			p[2] = dvdx1 * 2.0;
+
+			y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+			y[1] = (dvdx2 + dvdx1) - p[2];
+
+			mult2x2(A_inv, y, p);
+
+			p += NCOEF_CUBIC;
+		}
+		v += NCOLS;
+		// Middle entries
+		for (auto i = 1u; i < NROWS - 1; i++)
+		{
+			dx = _x[i + 1] - _x[i];
+			dx_sq = dx * dx;
+			half_dx0 = half_dx1;
+			half_dx1 = half_dx2;
+			half_dx2 = 0.5 / (_x[i + 2] - _x[i + 1]);
+
+			A[0] = dx_sq * dx;
+			A[1] = dx_sq;
+			A[2] = 3.0 * dx_sq;
+			A[3] = 2.0 * dx;
+			inverse2x2(A, A_inv);
+			for (auto j = 0u; j < NCOLS; j++)
+			{
+				auto dvdx0 = (v[j] - v[j - NCOLS]) * dx0;
+				auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
+				auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * dx2;
+
+				p[2] = dvdx1 + dvdx0; // c or dvdx at point x1
+
+				y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+				y[1] = (dvdx2 + dvdx1) - p[2];
+
+				mult2x2(A_inv, y, p);
+
+				p += NCOEF_CUBIC;
+			}
+			v += NCOLS;
 		}
 
-		switch (method)
+		// Last entry
+		dx = _x.back() - _x[_size() - 2];
+		dx_sq = dx * dx;
+
+		A[0] = dx_sq * dx;
+		A[1] = dx_sq;
+		A[2] = 3.0 * dx_sq;
+		A[3] = 2.0 * dx;
+		inverse2x2(A, A_inv);
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			auto dvdx0 = (v[j] - v[j - NCOLS]) * dx0;
+			auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
+
+			p[2] = dvdx1 + dvdx0;
+
+			y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+			y[1] = dvdx1 * 2.0 - p[2];
+
+			mult2x2(A_inv, y, p);
+
+			p += NCOEF_CUBIC;
+		}
+	}
+
+	void interpolate_nearest(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = (it - _x);
+		idx += (x > _p[idx]);
+		memcpy(v, _v + idx * NCOLS, ROW_BYTES);
+	}
+
+	void interpolate_linear(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = static_cast<unsigned>(it - _x) * NCOLS;
+		const auto* __v = _v + idx;
+		const auto* __p = _p + idx;
+		const auto delta = x - *it;
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			v[j] = __v[j] + delta * __p[j];
+		}
+
+	}
+
+	void interpolate_cubic(Float x, Float* v)
+	{
+		auto it = std::lower_bound(_x, _x + NROWS, x);
+		auto idx = static_cast<unsigned>(it - _x) * NCOLS;
+		const auto* __v = _v + idx;
+		const auto* __p = _p + idx;
+		const auto dx = x - *it;
+		// could be faster with simd and precomputing dx^2 dx^3
+		for (auto j = 0u; j < NCOLS; j++)
+		{
+			v[j] = __v[j] + dx * (__p[2] + dx * (__p[1] + dx * __p[0]);
+			__p += NCOEF_CUBIC;
+		}
+	}
+
+	void extrapolate_hold_last_value(Float dx, Float* v)
+	{
+		memcpy(v, _v + LAST_IDX * (dx > 0), ROW_BYTES);
+	}
+
+	void extrapolate_linear(Float dx, Float* v)
+	{
+		Float* row;
+		Float dx_ratio;
+		if (dx > 0)
+		{
+			row = _v + (LAST_IDX - NCOLS);
+			dx_ratio = dx / (_x[NROWS - 1] - _x[NROWS - 2]);
+		}
+		else
+		{
+			row = _v;
+			dx_ratio = dx / (_x[1] - _x[0]);
+		}
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			v[i] = row[i] + (row[i + NCOLS] - row[i])*dx_ratio;
+		}
+	}
+
+public:
+
+	DynamicTable(unsigned __NROWS,
+				unsigned __NCOLS,
+				Table::INTERPOLATION interp = LINEAR,
+				Table::EXTRAPOLATION extrap = HOLD_LAST_VALUE) :
+		_x(new Float[__NROWS]),
+		_v(new Float[__NROWS*__NCOLS]),
+		LAST_IDX((__NROWS-1)*NCOLS),
+		NROWS(__NROWS),
+		NCOLS(__NCOLS),
+		ROW_BYTES(__NCOLS * sizeof(Float))
+	{
+		if (interp == CUBIC && __NROWS < 4)
+		{
+			interp = _NROWS > 1 ? LINEAR : FLOOR;
+		}
+		if (interp == LINEAR && __NROWS < 2)
+		{
+			interp = FLOOR;
+		}
+
+		switch (interp)
 		{
 		case NEAREST:
 			_p = new Float[__NROWS];
@@ -252,6 +470,20 @@ public:
 		default:
 			_p = nullptr;
 			break;
+		}
+
+		if (extrap == LINEAR && __NROWS < 2)
+		{
+			extrap = HOLD_LAST_VALUE;
+		}
+
+		if (extrap == LINEAR)
+		{
+			_extrapolate = &Table::extrapolate_linear();
+		}
+		else
+		{
+			_extrapolate = &Table::extrapolate_hold_last_value();
 		}
 	}
 
@@ -281,126 +513,20 @@ public:
 	{
 		if (x < _x[0])
 		{
-
+			_extrapolate(x - _x[0], v);
+			return;
 		}
 		if (x > _x.back())
 		{
-
+			_extrapolate(x - _x.back(), v);
+			return;
 		}
 		_interpolate(x, v);
 	}
 
-private:
-
-	void finish_nearest()
+	void interpolate(Float x, Float* v) const
 	{
-		for (auto i = 1u; i < NROWS; i++)
-		{
-			_p[i - 1] = 0.5*(_x[i] + _x[i - 1]);
-		}
+		_interpolate(x, v);
 	}
 
-	void finish_linear()
-	{
-		auto* v = _v;
-		auto* dv = _p;
-		for (auto i = 1u; i < NROWS; i++)
-		{
-			auto dx = 1.0 / (_x[i] - _x[i - 1]);
-			for (auto j = 0u; j < NCOLS; j++)
-			{
-				dv[j] = (v[j + NCOLS] - v[j]) * dx;
-			}
-		}
-	}
-
-	void finish_cubic()
-	{
-		if (NROWS < 3)
-		{
-			finish_linear();
-		}
-		auto* v = _v;
-		auto* p = _p;
-
-		const auto NEXT_ROW = 2 * NCOLS;
-
-		Float A[4];
-		Float A_inv[4];
-		Float y[2];
-		
-		auto half_dx0 = 1.0;
-		auto half_dx1 = 0.5 / (_x[1] - _x[0]);
-		auto half_dx2 = 0.5 / (_x[2] - _x[1]);
-
-		p += ncoefs;
-		v += NCOLS;
-		for (auto i = 1u; i < NROWS - 1; i++)
-		{
-			auto dx = _x[i + 1] - _x[i];
-			auto dx_sq = dx*dx;
-			half_dx0 = half_dx1;
-			half_dx1 = half_dx2;
-			half_dx2 = 0.5 / (_x[i + 2] - _x[i + 1]);
-
-			A[0] = dx_sq*dx;
-			A[1] = dx_sq;
-			A[2] = 3.0*dx_sq;
-			A[3] = 2.0*dx;
-			inverse2x2(A, A_inv);
-			for (auto j = 0u; j < NCOLS; j++)
-			{
-				auto dvdx0 = (v[j] - v[j - NCOLS])*dx0;
-				auto dvdx1 = (v[j + NCOLS] - v[j])*dx1;
-				auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS])*dx2;
-
-				p[2] = dvdx1 + dvdx0; // c or dvdx at point x1
-
-				y[0] = (_v[j + NCOLS] - p[2]*dx - _v[j];
-				y[1] = (dvdx2 + dvdx1) - p[2];
-
-				mult2x2(A_inv, y, p);
-
-				p += NCOEF_CUBIC;
-			}
-			v += NCOLS;
-		}
-	}
-
-	void interpolate_nearest(Float x, Float* v)
-	{
-		auto it = std::lower_bound(_x, _x + NROWS, x);
-		auto idx = (it - _x);
-		idx += (x > _p[idx]);
-		memcpy(v, _v + idx*NCOLS, ROW_BYTES);
-	}
-
-	void interpolate_linear(Float x, Float* v)
-	{
-		auto it = std::lower_bound(_x, _x + NROWS, x);
-		auto idx = static_cast<unsigned>(it - _x)*NCOLS;
-		const auto* __v = _v + idx;
-		const auto* __p = _p + idx;
-		const auto delta = x - *it;
-		for (auto j = 0u; j < NCOLS; j++)
-		{
-			v[j] = __v[j] + delta * __p[j];
-		}
-
-	}
-
-	void interpolate_cubic(Float x, Float* v)
-	{
-		auto it = std::lower_bound(_x, _x + NROWS, x);
-		auto idx = static_cast<unsigned>(it - _x) * NCOLS;
-		const auto* __v = _v + idx;
-		const auto* __p = _p + idx;
-		const auto dx = x - *it;
-		// could be vaster with simd and precomputing dx^2 dx^3
-		for (auto j = 0u; j < NCOLS; j++)
-		{
-			v[j] = __v[j] + dx * (__p[2] + dx * (__p[1] + dx * __p[0]);
-			__p += NCOEF_CUBIC;
-		}
-	}
 };

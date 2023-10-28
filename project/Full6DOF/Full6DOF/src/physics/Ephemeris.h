@@ -118,6 +118,11 @@ public:
             double delta = mjd - *it;
 
             interpolated.elements = _ephemeris[idx];
+            const auto& d = _dephemeris[idx];
+            for (unsigned i = 0; i < 6; i++)
+            {
+                interpolated.elements[i] += d[i] * delta;
+            }
 
             interpolated.true_anomaly = Ephemeris::trueAnomalyFromMeanAnomaly(MA, interpolated.eccentricity);
         }
