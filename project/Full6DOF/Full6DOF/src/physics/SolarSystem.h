@@ -19,6 +19,8 @@ class EphemerisHistory
 
     Eigen::Vector3d _position;
 
+    unsigned _tidx = 0;
+
 public:
 
     void load(std::string file);

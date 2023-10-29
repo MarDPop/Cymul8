@@ -118,12 +118,18 @@ void EphemerisHistory::set(double mjd)
     }
     else
     {
-        auto it = std::lower_bound(_mjd.begin(), _mjd.end(), mjd);
-        auto idx = std::distance(_mjd.begin(), it);
-        double delta = mjd - *it;
+        while (mjd > _mjd[_tidx + 1])
+        {
+            _tidx++;
+        }
+        while (mjd < _mjd[_tidx])
+        {
+            _tidx--;
+        }
+        double delta = mjd - _mjd[_tidx];
 
-        _current.elements = _ephemeris[idx];
-        const auto& d = _dephemeris[idx];
+        _current.elements = _ephemeris[_tidx];
+        const auto& d = _dephemeris[_tidx];
         for (unsigned i = 0; i < 6; i++)
         {
             _current.elements[i] += d[i] * delta;
