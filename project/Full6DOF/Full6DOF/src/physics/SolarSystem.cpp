@@ -100,6 +100,10 @@ void EphemerisHistory::load(std::string filename)
             }
             _dephemeris.push_back(de);
         }
+        _dephemeris.push_back(_dephemeris.back());
+        memset(_dephemeris.back().data(), 0, 5 * sizeof(double));
+        _dephemeris.push_back(_dephemeris.front());
+        memset(_dephemeris.back().data(), 0, 5 * sizeof(double));
     }
 }
 
@@ -109,12 +113,7 @@ void EphemerisHistory::set(double mjd)
     bool after = mjd > _mjd.back();
     if (before || after)
     {
-        auto idx = after * (_mjd.size() - 1);
-        _current.elements = _ephemeris[idx];
-        double dt = (mjd - _mjd[idx]) * EpochTime::JULIAN_DAY_SEC_D;
-        double mean_motion = sqrt(_current.MU / func::CB(_current.semi_major_axis));
-        double MA = _current.elements.back() + mean_motion * dt;
-        _current.true_anomaly = Ephemeris::trueAnomalyFromMeanAnomaly(MA, _current.eccentricity);
+        _tidx = _mjd.size() - after;
     }
     else
     {
@@ -126,17 +125,20 @@ void EphemerisHistory::set(double mjd)
         {
             _tidx--;
         }
-        double delta = mjd - _mjd[_tidx];
-
-        _current.elements = _ephemeris[_tidx];
-        const auto& d = _dephemeris[_tidx];
-        for (unsigned i = 0; i < 6; i++)
-        {
-            _current.elements[i] += d[i] * delta;
-        }
-
-        _current.true_anomaly = Ephemeris::trueAnomalyFromMeanAnomaly(_current.true_anomaly, _current.eccentricity);
+        
     }
+    double delta = mjd - _mjd[_tidx];
+
+    _current.elements = _ephemeris[_tidx];
+    const auto& d = _dephemeris[_tidx];
+    for (unsigned i = 0; i < 6; i++)
+    {
+        _current.elements[i] += d[i] * delta;
+    }
+
+    double EA = Ephemeris::eccentricAnomalyFromMeanAnomaly(_current.true_anomaly, _current.eccentricity);
+    _current.true_anomaly = Ephemeris::trueAnomalyFromEccentricAnomaly(EA, _current.eccentricity);
+    Ephemeris::kepler2position(_current.elements.data(), _position.data());
 }
 
 void OrientationHistory_Constant::set(double mjd)
