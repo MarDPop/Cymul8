@@ -24,7 +24,7 @@ public:
 private:
     const Vehicle& _vehicle;
 
-    Planet _current_planet;
+    SolarSystemBody* _current_planet;
 
     Coordinate::ECI _ECI;
 
@@ -40,6 +40,10 @@ private:
 
     Coordinate::Geodetic _launch_lla;
 
+    double _TALO;
+
+    void (*_gravity_model)(double*);
+
     STATE _current_state;
 
 public:
@@ -54,6 +58,6 @@ public:
         _launch_lla = launch;
     }
 
-    void update(double T);
+    void update(double talo);
 
 };

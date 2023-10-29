@@ -16,10 +16,6 @@ protected:
 
 public:
 
-    Vehicle(){}
-
-    virtual ~Vehicle() {}
-
     void set_gnc(std::unique_ptr<GNC> gnc)
     {
         _gnc = std::move(gnc);

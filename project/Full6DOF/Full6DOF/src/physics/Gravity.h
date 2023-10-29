@@ -12,27 +12,14 @@
  * @brief 
  * 
  */
-struct Gravity : public virtual Eigen::Vector3d
+class Gravity
 {
-
-    virtual void compute(   const double* position,
-                            const double R,
-                            const double T) = 0;
-};
-
-class Multi_Gravity : public virtual Gravity
-{
-
-    std::vector<std::unique_ptr<Gravity>> _gravities;
 
 public:
 
-    Multi_Gravity() {}
+    virtual void set_time(EpochTime time) = 0;
 
-    void add_gravity(std::unique_ptr<Gravity>& gravity)
-    {
-        this->_gravities.push_back(std::move(gravity));
-    }
-
-    
+    virtual void compute(   const Coordinate::ECEF& position,
+                            const double R,
+                            Eigen::Vector3d& acceleration) = 0;
 };

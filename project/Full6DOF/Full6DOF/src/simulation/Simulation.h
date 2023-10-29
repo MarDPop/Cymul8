@@ -6,10 +6,11 @@
 
 #include "../vehicle/Vehicle.h"
 #include "../ode/ODE.h"
+#include "../physics/SolarSystem.h"
 
 class SimulationConfiguration
 {
-    double ALTITUDE_RARIFIED_DRAG = 100; // km
+    double DISTANCE_NOT_LOCAL = 30;//km
 };
 
 class Simulation
@@ -19,6 +20,8 @@ class Simulation
     std::unique_ptr<Vehicle> _vehicle;
 
     std::unique_ptr<ODE> _ode;
+
+    SolarSystem solar_system;
 
 public:
 

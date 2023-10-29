@@ -4,18 +4,6 @@
 
 namespace fmath
 {
-    template<typename T>
-    T SQ(T x)
-    {
-        return x*x;
-    }
-
-    template<typename T>
-    T CB(T x)
-    {
-        return x*x*x;
-    }
-
     float inv_fast(float x) {
         union { float f; int i; } v;
         float w, sx;
@@ -49,62 +37,5 @@ namespace fmath
         return u.dbl * y;               // (1.0/x) * y = y/x
     }
 
-    template<typename T>
-    inline T constexpr dot2(const T* u, const T* v)
-    {
-        return u[0] * v[0] + u[1] * v[1];
-    }
-
-    template<typename T>
-    inline void inverse2x2(const T* A, T* inv)
-    {
-        T det = 1.0 / (A[0]*A[3] - A[1]*A[2]);
-        inv[0] = A[3] * det;
-        inv[1] = -A[1] * det;
-        inv[2] = -A[2] * det;
-        inv[3] = A[0] * det;
-    }
-
-    template<typename T>
-    inline void mult2x2(const T* A, const T* x, T* y)
-    {
-        y[0] = dot2(A, x);
-        y[1] = dot2(A + 2, x);
-    }
-
-    template<typename T>
-    inline T constexpr dot3(const T* u, const T* v)
-    {
-        return u[0]*v[0] + u[1]*v[1] + u[2]*v[2];
-    }
-
-    template<typename T>
-    inline void inverse3x3(const T* A, T* inv)
-    {
-        inv[0] = A[4]*A[8] - A[5]*A[7];
-        inv[3] = -(A[3] * A[8] - A[5] * A[6]);
-        inv[6] = A[3] * A[7] - A[4] * A[6];
-        T det = 1.0 / (A[0]*inv[0] + A[1]*inv[3] + A[2]*inv[6]);
-        inv[0] *= det;
-        inv[3] *= det;
-        inv[6] *= det;
-
-        inv[1] = -det * (A[1]*A[8] - A[2]*A[7]);
-        inv[4] = det * (A[0]*A[8] - A[2]*A[6]);
-        inv[7] = -det * (A[0]*A[7] - A[1]*A[6]);
-
-        inv[2] = det * (A[1]*A[5] - A[2]*A[4]);
-        inv[5] = -det * (A[0]*A[5] - A[2]*A[3]);
-        inv[8] = det * (A[0]*A[4] - A[1]*A[3]);
-
-        return out;
-    }
-
-    template<typename T>
-    inline void mult3x3(const T* A, const T* x, T* y)
-    {
-        y[0] = dot3(A, x);
-        y[1] = dot3(A + 3, x);
-        y[2] = dot3(A + 6, x);
-    }
+    
 }
