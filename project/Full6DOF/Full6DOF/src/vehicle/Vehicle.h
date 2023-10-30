@@ -1,34 +1,53 @@
 #pragma once
 
 #include "GNC.h"
-#include "../physics/Environment.h"
+#include "Environment.h"
 
 #include <memory>
 
 class Vehicle
 {
 protected:
-    friend class Environment;
 
-    std::unique_ptr<GNC> _gnc;
+    Eigen::Vector3d _position;
 
-    Environment _environment;
+    Eigen::Vector3d _velocity;
+
+    Eigen::Vector3d _acceleration;
+
+    double _mass;
+
+    double _mass_rate;
 
 public:
 
-    void set_gnc(std::unique_ptr<GNC> gnc)
+    Environment environment;
+
+    std::unique_ptr<GNC> gnc;
+
+    const Eigen::Vector3d& get_position() const
     {
-        _gnc = std::move(gnc);
+        return _position;
     }
 
-    GNC& get_gnc()
+    const Eigen::Vector3d& get_velocity() const
     {
-        return *_gnc;
+        return _velocity;
     }
 
-    const GNC& get_gnc() const
+    const Eigen::Vector3d& get_accelaration() const
     {
-        return *_gnc;
+        return _acceleration;
+    }
+
+    double get_mass() const
+    {
+        return _mass;
+    }
+
+    double get_mass_rate() const
+    {
+        return _mass_rate;
     }
 };
 

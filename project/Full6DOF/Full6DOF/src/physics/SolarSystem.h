@@ -13,7 +13,7 @@ class EphemerisHistory
 
     std::vector<std::array<double, 6>> _dephemeris;
 
-    std::vector<double> _mjd;
+    std::vector<double> _jd2000;
 
     Ephemeris _current;
 
@@ -25,7 +25,7 @@ public:
 
     void load(std::string file);
 
-    void set(double mjd);
+    void set(double jd2000);
 
     const Eigen::Vector3d& get_position() const
     {
@@ -40,40 +40,44 @@ class OrientationHistory
 {
 protected:
 
-    Eigen::Matrix3d _pci2pcef; // ECI 2 ECEF
+    Eigen::Matrix3d _icrf2fixed; // ECI 2 ECEF
+
+    double _rotation_rate;
 
 public:
 
-    virtual void set(double mjd) = 0;
+    virtual void set(double jd2000) = 0;
 
-    const Eigen::Matrix3d& get()
+    const Eigen::Matrix3d& get_icrf2fixed() const
     {
-        return _pci2pcef;
+        return _icrf2fixed;
     }
 
+    const double get_rotation_rate() const
+    {
+        return _rotation_rate;
+    }
 };
 
 class OrientationHistory_Constant : public virtual OrientationHistory
 {
     const Eigen::Matrix3d _axis_ref;
 
-    const double _mjd_ref;
-
-    const double _rotation_rate;
+    const double _jd2000_ref;
 
 public:
 
     OrientationHistory_Constant(Eigen::Matrix3d __axis_ref,
-        double __mjd_ref,
+        double __jd2000_ref,
         double __rotation_rate) :
         _axis_ref(__axis_ref),
-        _mjd_ref(__mjd_ref),
-        _rotation_rate(__rotation_rate) 
+        _jd2000_ref(__jd2000_ref)
     {
-        _pci2pcef = __axis_ref;
+        _icrf2fixed = __axis_ref;
+        _rotation_rate = __rotation_rate;
     }
 
-    void set(double mjd) override;
+    void set(double jd2000) override;
 
 };
 
@@ -117,9 +121,11 @@ public:
         MAINBODY = 99
     };
 
+    const double MU;
+
     const SolarSystemBody* const parent;
 
-    const int _id;
+    const int id;
 
     SolarSystemBody(
             std::unique_ptr<Gravity> __gravity,
@@ -127,6 +133,7 @@ public:
             std::unique_ptr<Geometry> __geometry,
             std::unique_ptr<OrientationHistory> __orientation,
             EphemerisHistory __ephemeris,
+            double __MU,
             int __id,
             const SolarSystemBody* __parent = nullptr) :
         _gravity(std::move(__gravity)),
@@ -134,10 +141,15 @@ public:
         _geometry(std::move(__geometry)),
         _orientation(std::move(__orientation)),
         _ephemeris(std::move(__ephemeris)),
-        _id(__id),
+        MU(__MU),
+        id(__id),
         parent(__parent) {}
 
-    void set(EpochTime time);
+    void set(double jd2000)
+    {
+        _ephemeris.set(jd2000);
+        _orientation->set(jd2000);
+    }
 
     const Gravity& gravity() { return *_gravity; }
 
@@ -150,15 +162,22 @@ public:
     const EphemerisHistory& ephemeris() { return _ephemeris; }
 
     const std::vector<SolarSystemBody>& bodies() { return _orbiting_bodies; }
-
-
 };
 
+class RadiationPressure
+{
+
+public:
+
+    virtual double get(double R) { return 0.0; }
+};
 
 class SolarSystem
 {
 
     SolarSystemBody _sol;
+
+    std::unique_ptr<RadiationPressure> _radiation_pressure;
 
     std::vector<SolarSystemBody*> _bodies;
 
@@ -167,5 +186,13 @@ public:
     void add(int identifier);
 
     void remove(int identifier);
+
+    void set(double jd2000)
+    {
+        for (auto* body : _bodies)
+        {
+            body->set(jd2000);
+        }
+    }
 
 };

@@ -33,31 +33,31 @@ namespace Coordinate
 
     typedef Eigen::Vector3d _3D;
 
-    class ECEF : public virtual _3D
+    class GeocentricFixed : public virtual Eigen::Vector3d
     {
     public:
 
     };
 
-    class ECI : public virtual _3D
+    class GeocentricInertial : public virtual Eigen::Vector3d
     {
     public:
 
     };
 
-    class Geodetic : public virtual _3D
+    class Geodetic : public virtual Eigen::Vector3d
     {
     public:
 
     };
 
-    class LocalTangentPlane : public virtual _3D
+    class ENU : public virtual Eigen::Vector3d
     {
     public:
 
     };
 
-    class Spherical : public virtual _3D
+    class Spherical : public virtual Eigen::Vector3d
     {
     public:
 

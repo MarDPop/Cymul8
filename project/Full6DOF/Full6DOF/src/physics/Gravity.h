@@ -19,7 +19,7 @@ public:
 
     virtual void set_time(EpochTime time) = 0;
 
-    virtual void compute(   const Coordinate::ECEF& position,
+    virtual void compute(   const Coordinate::GeocentricFixed& position,
                             const double R,
                             Eigen::Vector3d& acceleration) = 0;
 };

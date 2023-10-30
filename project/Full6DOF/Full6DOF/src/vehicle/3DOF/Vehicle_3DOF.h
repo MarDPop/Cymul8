@@ -14,6 +14,4 @@ class Vehicle_3DOF : public virtual Vehicle
 
 public:
 
-    Vehicle_3DOF(Environment& environment) : Vehicle(environment) {}
-
 };

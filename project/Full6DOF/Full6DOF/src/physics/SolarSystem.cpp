@@ -54,8 +54,8 @@ void EphemerisHistory::load(std::string filename)
                     break;
                 }
                 auto data = strings::split(line, ',');
-                auto mjd = std::stod(data[0]) - EpochTime::MJD_JULIAN_DATE;
-                _mjd.push_back(mjd);
+                auto jd2000 = std::stod(data[0]) - EpochTime::JULIAN_DATE_J2000;
+                _jd2000.push_back(jd2000);
 
                 std::array<double, 6> e;
                 e[1] = std::stod(data[2]);
@@ -78,7 +78,7 @@ void EphemerisHistory::load(std::string filename)
                     continue;
                 }
                 auto data = strings::split(line);
-                _mjd.push_back(std::stod(data[0]));
+                _jd2000.push_back(std::stod(data[0]));
                 std::array<double, 6> e;
                 for (auto i = 0; i < 6; i++)
                 {
@@ -93,7 +93,7 @@ void EphemerisHistory::load(std::string filename)
             std::array<double, 6> de;
             const auto& lo = _ephemeris[nE - 1];
             const auto& hi = _ephemeris[nE];
-            auto dmjd = 1.0 / (_mjd[nE] - _mjd[nE - 1]);
+            auto dmjd = 1.0 / (_jd2000[nE] - _jd2000[nE - 1]);
             for (auto i = 0; i < 6; i++)
             {
                 de[i] = (hi[i] - lo[i]) * dmjd;
@@ -107,27 +107,27 @@ void EphemerisHistory::load(std::string filename)
     }
 }
 
-void EphemerisHistory::set(double mjd)
+void EphemerisHistory::set(double jd2000)
 {
-    bool before = mjd < _mjd[0];
-    bool after = mjd > _mjd.back();
+    bool before = jd2000 < _jd2000[0];
+    bool after = jd2000 > _jd2000.back();
     if (before || after)
     {
-        _tidx = _mjd.size() - after;
+        _tidx = _jd2000.size() - after;
     }
     else
     {
-        while (mjd > _mjd[_tidx + 1])
+        while (jd2000 > _jd2000[_tidx + 1])
         {
             _tidx++;
         }
-        while (mjd < _mjd[_tidx])
+        while (jd2000 < _jd2000[_tidx])
         {
             _tidx--;
         }
         
     }
-    double delta = mjd - _mjd[_tidx];
+    double delta = jd2000 - _jd2000[_tidx];
 
     _current.elements = _ephemeris[_tidx];
     const auto& d = _dephemeris[_tidx];
@@ -141,9 +141,9 @@ void EphemerisHistory::set(double mjd)
     Ephemeris::kepler2position(_current.elements.data(), _position.data());
 }
 
-void OrientationHistory_Constant::set(double mjd)
+void OrientationHistory_Constant::set(double jd2000)
 {
-    const double angle = _rotation_rate*(mjd - _mjd_ref);
+    const double angle = _rotation_rate*(jd2000 - _jd2000_ref);
     
-    _pci2pcef = Eigen::AngleAxisd(angle, _axis_ref.row(2));
+    _icrf2fixed = Eigen::AngleAxisd(angle, _axis_ref.row(2));
 }

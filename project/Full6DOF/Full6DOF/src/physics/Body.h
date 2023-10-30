@@ -242,6 +242,31 @@ struct Inertia
 template<MOMENT_CONSTANTS NDEG>
 class Body : Fixed_Size_Dynamics<17 + NDEG>
 {
+public:
+
+    static void get_orientation_rate(const Eigen::Vector3d& angular_velocity, 
+                                     const Eigne::Quaterniond& orientation,
+                                     double* q_dot)
+    {
+
+        Eigen::Matrix4d angular_matrix {
+            {-angular_velocity.x(), -angular_velocity.y(), -angular_velocity.z(), 0.0},
+            {0.0, angular_velocity.z(), -angular_velocity.y(), angular_velocity.x()},
+            {-angular_velocity.z(), 0.0, angular_velocity.x(), angular_velocity.y()},
+            {angular_velocity.y(), -angular_velocity.x(), 0.0, angular_velocity.z()}
+        }; // outer product w x q
+
+        Eigen::Map<Eigen::Vector4d> quat(orientation.coeffs().data());
+
+        Eigen::Vector4d mult = angular_matrix*quat;
+
+        auto q = mult.data();
+        q_dot[0] = q[0]*0.5;
+        q_dot[1] = q[1]*0.5;
+        q_dot[2] = q[2]*0.5;
+        q_dot[3] = q[3]*0.5;
+    }
+
 protected:
 
     union 
@@ -269,59 +294,30 @@ protected:
 
     double _time;
 
-    inline void set_state_and_time(const std::array<double, 17 + NDEG>& state, double time)
-    {
-        this->_state = state;
-        this->_time = time;
-    }
-
-    inline void get_orientation_rate(double* dx)
-    {
-
-        Eigen::Matrix4d angular_matrix {
-            {-_angular_velocity.x(), -_angular_velocity.y(), -_angular_velocity.z(), 0.0},
-            {0.0, _angular_velocity.z(), -_angular_velocity.y(), _angular_velocity.x()},
-            {-_angular_velocity.z(), 0.0, _angular_velocity.x(), _angular_velocity.y()},
-            {_angular_velocity.y(), -_angular_velocity.x(), 0.0, _angular_velocity.z()}
-        }; // outer product w x q
-
-        Eigen::Map<Eigen::Vector4d> quat(_orientation.coeffs().data());
-
-        Eigen::Vector4d mult = angular_matrix*quat;
-
-        auto q = mult.data();
-        dx[0] = q[0]*0.5;
-        dx[1] = q[1]*0.5;
-        dx[2] = q[2]*0.5;
-        dx[3] = q[3]*0.5;
-        
-    }
-
-    inline void get_state_rate(double* dx)
+    void get_state_rate(double* dx)
     {
         memcpy(dx,this->_velocity.data(),3*sizeof(double));
         memcpy(dx + 3,this->_acceleration.data(),3*sizeof(double));
-        get_orientation_rate(dx + 6);
+        get_orientation_rate(_angular_velocity, _orientation, dx + 6);
         memcpy(dx + 10,this->_angular_acceleration.data(),3*sizeof(double));
         dx[13] = this->_inertia_rate.mass;
         memcpy(dx + 14,this->_inertia_rate.center_of_mass.data(),3*sizeof(double));
         memcpy(dx + 17,this->_inertia_rate.moment_of_inertia.I.data(),NDEG*sizeof(double));
     }
 
-    inline virtual void compute_state_rate(){} 
+    virtual void compute_state_rate() = 0;
 
-    inline virtual bool stop_conditions()
+    virtual bool stop_conditions()
     {
         return true;
     }
 
 public:
 
-    inline Body() {}
-
-    inline bool set_state(const std::array<double, 17 + NDEG>& x, const double& time, std::array<double,17 + NDEG>& dx) override
+    bool set_state(const std::array<double, 17 + NDEG>& x, const double& time, std::array<double,17 + NDEG>& dx) override
     {
-        this->set_state_and_time(x,time);
+        this->_state = x;
+        this->_time = time;
         this->compute_state_rate();
         this->get_state_rate(dx.data());
         return this->stop_conditions();

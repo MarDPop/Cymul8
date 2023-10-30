@@ -76,7 +76,7 @@ public:
 
     static constexpr double HALF_DAY_SEC = 43200.0;
 
-    inline EpochTime(){}
+    inline EpochTime() : _mjdn(JDN_J2000), _day_sec(HALF_DAY_SEC) {}
 
     inline EpochTime(int mjdn, double day_sec) : _mjdn(mjdn), _day_sec(day_sec) {}
 
@@ -150,6 +150,11 @@ public:
     inline double to_julian_date() const
     {
         return static_cast<double>(this->_mjdn) + (this->_day_sec*SEC_2_DAY_FRACTION + MJD_JULIAN_DATE);
+    }
+
+    inline double days_past_J2000() const
+    {
+        return static_cast<double>(this->_mjdn - JDN_J2000) + (this->_day_sec * SEC_2_DAY_FRACTION - 0.5);
     }
 
     inline static double get_besselian_years(double jd)
