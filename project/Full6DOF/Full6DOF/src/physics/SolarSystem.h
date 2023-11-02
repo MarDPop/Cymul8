@@ -169,7 +169,7 @@ class RadiationPressure
 
 public:
 
-    virtual double get(double R) { return 0.0; }
+    virtual double get(double R, double T) { return 0.0; }
 };
 
 class SolarSystem

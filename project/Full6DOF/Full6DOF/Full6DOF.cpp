@@ -18,7 +18,8 @@ void run(char** argv)
 {
 	tinyxml2::XMLDocument simDocument;
 	auto err = simDocument.LoadFile(argv[2]);
-	if (err != tinyxml2::XML_SUCCESS) {
+	if (err != tinyxml2::XML_SUCCESS) 
+	{
 		//Could not load file. Handle appropriately.
 		throw std::invalid_argument("Could not load file.");
 	}

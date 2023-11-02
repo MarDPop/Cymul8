@@ -29,9 +29,16 @@ class Vehicle_6DOF : public virtual Vehicle
 
 public:
 
-    void operator(double* x, double time, double* dx)
+    unsigned get_num_states() const override
     {
+        return 17 + DEG + gnc.get_number_control_states();
+    }
 
+    void operator()(const double* x, const double time, double* dx) override
+    {
+        memcpy(_position.data(), x, 3*sizeof(double));
+        memcpy(_velocity.data(), x + 3, 3*sizeof(double));
+        memcpy(_velocity.data(), x + 3, 3 * sizeof(double));
     }
 
     void set_aerodynamics(std::unique_ptr<Aerodynamics> aero)

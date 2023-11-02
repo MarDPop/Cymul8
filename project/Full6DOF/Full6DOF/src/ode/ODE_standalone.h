@@ -120,7 +120,9 @@ public:
 
 private:
 
-    Float* _state = nullptr;
+    Float* const _state; 
+
+    Float* const _state_tmp;
 
     Float* _state_rate = nullptr;
 
@@ -312,7 +314,10 @@ public:
 
     T dynamics;
 
-    ode() : _N(T.get_num_states()),
+    ode() : 
+        _state(new Float[_N]),
+        _state_tmp(new Float[_N]),
+        _N(T.get_num_states()),
         _state_bytes(_N*sizeof(Float)),
         options(_N)
     {}
@@ -333,34 +338,43 @@ public:
         return _state_rate;
     }
 
+    /**
+    * @brief run and record
+    */
     inline recording run(run_options& options)
     {
-
-        void (*step)(ode&) = &ode::euler_step;
-        switch (options.step)
-        {
-            case HUEN:
-                step = &ode::huen_step;
-                this->_state_rate = new Float[_N];
-                break;
-            case RK4:
-                step = &ode::rk4_step;
-                this->_state_rate = new Float[_N*5];
-                break;
-            case RK23:
-                step = &ode::rk23_step;
-                this->_state_rate = new Float[_N*5];
-                __ode.dynamics(options.initial_state.data(), __ode._state_rate);
-                break;
-        }
-
+        // Initialize recording
         recording record(options);
 
+        // Initial state and time
         memcpy(_state, options.initial_state.data(), _state_bytes);
         _time = options.start_time;
         _dt = options.initial_time_step;
 
         record.emplace_back(_state, _N);
+
+        void (*step)(ode&) = &ode::euler_step;
+        switch (options.step)
+        {
+        case HUEN:
+            step = &ode::huen_step;
+            this->_state_rate = new Float[_N];
+            break;
+        case RK4:
+            step = &ode::rk4_step;
+            this->_state_rate = new Float[_N*5];
+            break;
+        case EULER_HUEN:
+            step = &ode::huen_step;
+            this->_state_rate = new Float[_N*2];
+            break;
+        case RK23:
+            step = &ode::rk23_step;
+            this->_state_rate = new Float[_N*4];
+            // need to initialize K1 for FSAL
+            dynamics(_state, _time, _state_rate + 4*N);
+            break;
+        }
 
         while (_time < options.end_time && T.valid())
         {
