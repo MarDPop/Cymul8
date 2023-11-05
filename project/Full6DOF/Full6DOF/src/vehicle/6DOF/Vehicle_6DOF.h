@@ -8,18 +8,10 @@
 #include "Aerodynamics.h"
 #include "Propulsion.h"
 
-template<MOMENT_CONSTANTS NDEG>
-class Vehicle_6DOF : public virtual Vehicle
+template<MOMENT_CONSTANTS NDEG, class GNC>
+class Vehicle_6DOF : public virtual Vehicle<BODY<NDEG>, GNC>
 {
-    Eigen::Quaterniond _orientation;
-
-    Eigen::Vector3d _angular_velocity;
-
-    Eigen::Vector3d _angular_acceleration;
-
-    Inertia<NDEG> _inertia;
-
-    Inertia<NDEG> _inertia_rate;
+protected:
 
     std::unique_ptr<Aerodynamics> _aerodynamics;
 
@@ -28,18 +20,6 @@ class Vehicle_6DOF : public virtual Vehicle
     BodyAction _action_sum;
 
 public:
-
-    unsigned get_num_states() const override
-    {
-        return 17 + DEG + gnc.get_number_control_states();
-    }
-
-    void operator()(const double* x, const double time, double* dx) override
-    {
-        memcpy(_position.data(), x, 3*sizeof(double));
-        memcpy(_velocity.data(), x + 3, 3*sizeof(double));
-        memcpy(_velocity.data(), x + 3, 3 * sizeof(double));
-    }
 
     void set_aerodynamics(std::unique_ptr<Aerodynamics> aero)
     {
@@ -51,19 +31,34 @@ public:
         _propulsion = std::move(propulsion);
     }
 
-    const Eigen::Quaterniond& get_orientation() const { return _orientation; }
+    void operator()(const double* x, const double t, double* dx)
+    {
+        memcpy(_body.state.data(), x, sizeof(_body.state));
+    }
+};
 
-    const Eigen::Vector3d& get_angular_velocity() const { return _angular_velocity; }
+template<class A, class P, MOMENT_CONSTANTS NDEG, class GNC>
+class Vehicle_6DOF_T : public virtual Vehicle<BODY<NDEG>, GNC>
+{
+    static_assert(std::is_base_of<Aerodynamics>, A > ::value, "A not derived from Aerodynamics");
+    static_assert(std::is_base_of<Propulsion>, P > ::value, "P not derived from Propulsion");
 
-    const Eigen::Vector3d& get_angular_acceleration() const { return _angular_acceleration; }
+protected:
 
-    const Inertia<NDEG>& get_inertia() const { return _inertia; }
+    A _aerodynamics;
 
-    const Inertia<NDEG>& get_inertia_rate() const { return _inertia_rate; }
+    P _propulsion;
 
-    const Aerodynamics& get_aerodynamics() const { return *_aerodynamics; }
+    BodyAction _action_sum;
 
-    const Propulsion& get_propulsion() const { return *_propulsion; }
+public:
 
-    const BodyAction& get_action_sum() const { return _action_sum; }
+    void operator()(const double* x, const double t, double* dx)
+    {
+        memcpy(_body.state.data(), x, sizeof(_body.state));
+        _environment.update(_body.position, _body.velocity, t);
+
+        _aerodynamics.update(_environment, t);
+        _propulsion.update(_environment, t);
+    }
 };

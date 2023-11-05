@@ -4,6 +4,22 @@
 #include "../physics/Coordinates.h"
 #include "../physics/SolarSystem.h"
 
+struct AeroData
+{
+    Air air;
+    double airspeed;
+    double mach;
+    double dynamic_pressure;
+    double impact_pressure;
+};
+
+struct LaunchData
+{
+    Coordinate::Geodetic launch_lla;
+    EpochTime launch_time;
+    SolarSystemBody* launch_body;
+};
+
 class Environment
 {
 public:
@@ -35,34 +51,38 @@ private:
 
     Coordinate::Spherical _RTP;
 
-    EpochTime _launch_time;
-
-    Coordinate::Geodetic _launch_lla;
-
     Eigen::Vector3d _frame_acceleration; // includes gravity
 
-    Air* _air;
+    AeroData _aero;
 
     double _radiation_pressure;
 
+    std::unique_ptr<LaunchData> _launch;
+
     STATE _current_state;
 
-    void update_launch(const double* state,
+    void update_launch( const Eigen::Vector3d& position, 
+                        const Eigen::Vector3d& velocity,
+                        double talo);
+
+    void update_atm(const Eigen::Vector3d& position,
+        const Eigen::Vector3d& velocity,
         double talo);
 
-    void update_atm(const double* state,
+    void update_low_orbit(const Eigen::Vector3d& position,
+        const Eigen::Vector3d& velocity,
         double talo);
 
-    void update_low_orbit(const double* state,
+    void update_high_orbit(const Eigen::Vector3d& position,
+        const Eigen::Vector3d& velocity,
         double talo);
 
-    void update_high_orbit(const double* state,
+    void update_interplanetary(const Eigen::Vector3d& position,
+        const Eigen::Vector3d& velocity,
         double talo);
 
-    void update_interplanetary(const double* state,
-        double talo);
-
-    void update_coast(const double* state,
+    void update_coast(const Eigen::Vector3d& position,
+        const Eigen::Vector3d& velocity,
         double talo);
 
 public:
@@ -74,11 +94,6 @@ public:
         _launch_lla = launch;
     }
 
-    void set_air_reference(Air* air)
-    {
-        _air = air;
-    }
-
     void set_radation_pressure(double radiation_pressure)
     {
         _radiation_pressure = radiation_pressure;
@@ -86,6 +101,6 @@ public:
 
     void set_state(STATE state);
 
-    void (Environment::* update)(const double*, double);
+    void (Environment::*update)(const Eigen::Vector3d&, const Eigen::Vector3d&, double);
 
 };

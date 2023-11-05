@@ -15,7 +15,7 @@
     "",
     "\\Full6DOF",
     "\\Full6DOF\\src",
-    "\\Full6DOF\\src\\ode",
+    "\\Full6DOF\\src\\physics",
     "\\Full6DOF\\src\\simulation",
     "\\Full6DOF\\src\\util",
     "\\Full6DOF\\src\\vehicle",
@@ -23,6 +23,6 @@
     "\\Full6DOF\\src\\vehicle\\6DOF",
     "\\Full6DOF\\src\\vehicle\\Component"
   ],
-  "SelectedNode": "\\Full6DOF\\src\\ode\\ODE.h",
+  "SelectedNode": "\\Full6DOF\\src\\physics\\Body.h",
   "PreviewInSolutionExplorer": false
 }

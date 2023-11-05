@@ -19,10 +19,8 @@ struct Air_Extended
 class Atmosphere
 {
 
-    Air& _air;
-
 public:
 
-    virtual void update(const Coordinate::Geodetic& lla, double time) {}
+    virtual void update(const Coordinate::Geodetic& lla, double time, Air& air) {}
 
 };

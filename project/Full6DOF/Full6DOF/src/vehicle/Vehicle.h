@@ -2,66 +2,44 @@
 
 #include "GNC.h"
 #include "Environment.h"
+#include "../physics/Body.h"
 
-#include <memory>
-
-
-template<class G, class N, class C>
+template<class B, class G>
 class Vehicle
 {
-    
+    static_assert(std::is_base_of<GNC<B>>, G>::value, "G not derived from Guidance");
+
 protected:
 
-    Eigen::Vector3d _position;
+    friend class Vehicle_ODE;
 
-    Eigen::Vector3d _velocity;
+    B _body;
 
-    double _mass;
+    G _gnc;
 
-    Eigen::Vector3d _acceleration;
-
-    double _mass_rate;
+    Environment _environment;
 
 public:
 
-    Environment environment;
-
-    GuidanceNavigationControl<G,N,C> gnc;
-
     virtual void operator()(const double* x, const double t, double* dx) = 0;
 
-    virtual unsigned get_num_states() const = 0;
-
-    virtual void get_state(double* state)
+    static unsigned get_num_states() const
     {
-        memcpy(state, _position.data(), 3 * sizeof(double));
-        memcpy(state + 3, _velocity.data(), 3 * sizeof(double));
-        state[6] = _mass;
+        B::N_STATES + gnc.get_control_states();
     }
 
-    const Eigen::Vector3d& get_position() const
+    const B& get_body() const
     {
-        return _position;
+        return _body;
     }
 
-    const Eigen::Vector3d& get_velocity() const
+    const G& get_GNC() const
     {
-        return _velocity;
+        return _gnc;
     }
 
-    const Eigen::Vector3d& get_accelaration() const
+    const Environment& get_environment() const
     {
-        return _acceleration;
-    }
-
-    double get_mass() const
-    {
-        return _mass;
-    }
-
-    double get_mass_rate() const
-    {
-        return _mass_rate;
+        return _environment;
     }
 };
-

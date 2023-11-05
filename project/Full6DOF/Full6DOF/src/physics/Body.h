@@ -3,62 +3,73 @@
 #include "../ode/Dynamics.h"
 #include "../../lib/Eigen/Dense"
 #include <cstring>
+#include <array>
+
+template<typename Float>
+struct Body_Base
+{
+    virtual void get_state_rate(Float* dx) = 0;
+};
 
 /**
  * @brief 
  * 
  */
-class Body_Point_Mass : public virtual Fixed_Size_Dynamics<7>
+template<typename Float>
+struct Body_Point_Mass : Body_Base<Float>
+{
+    static_assert(std::is_arithmetic<Float>::value, "Must use a arithmetic type");
+
+    static constexpr unsigned N_STATES = 7;
+
+    union
+    {
+        alignas(32) std::array<Float, N_STATES> state;
+        struct alignas(32)
+        {
+            Eigen::Matrix<Float, 3, 1> position;
+
+            Eigen::Matrix<Float, 3, 1> velocity;
+
+            Float mass;
+        };
+    };
+    
+    Eigen::Matrix<Float, 3, 1> acceleration;
+
+    Float mass_rate;
+
+    void get_state_rate(Float* dx) override
+    {
+        memcpy(dx, velocity.data(), 3*sizeof(Float));
+        memcpy(dx + 3, acceleration.data(), 3*sizeof(Float));
+        dx[6] = mass_rate;
+    }
+};
+
+/**
+ * @brief
+ *
+ */
+class Body_Point_Mass_Dynamics : virtual protected Body_Point_Mass<double>,
+                                    virtual Fixed_Size_Dynamics<7>
 {
 protected:
 
-    double _time;
+    double time;
 
-    Eigen::Vector3d _position;
+    virtual void compute_acceleration() {}
 
-    Eigen::Vector3d _velocity;
+    virtual void compute_mass_rate() {}
 
-    Eigen::Vector3d _acceleration;
-
-    double _mass;
-
-    double _mass_rate; 
-
-    inline virtual void set_state_and_time(const std::array<double, 7>& x, double time)
-    {
-        memcpy(this->_position.data(),&x[0],3*sizeof(double));
-        memcpy(this->_velocity.data(),&x[3],3*sizeof(double));
-        this->_mass = x[6];
-        this->_time = time;
-    }
-
-    inline virtual void compute_acceleration(){}
-
-    inline virtual void compute_mass_rate(){} 
-
-    inline virtual bool stop_conditions()
+    virtual bool stop_conditions()
     {
         return true;
     }
 
 public:
 
-    inline bool set_state(const std::array<double, 7>& x, const double& time, std::array<double,7>& dx)
-    {
-        this->set_state_and_time(x,time);
-        this->compute_acceleration();
-        this->compute_mass_rate();
-
-        dx[0] = x[3];
-        dx[1] = x[4];
-        dx[2] = x[5];
-        dx[3] = _acceleration[0];
-        dx[4] = _acceleration[1];
-        dx[5] = _acceleration[2];
-        dx[6] = _mass_rate;
-
-        return this->stop_conditions();
-    }
+    bool set_state(const std::array<double, 7>& x, const double& time, std::array<double, 7>& dx);
 
 };
 
@@ -86,7 +97,7 @@ struct MomentOfInertia
 {
     std::array<double, NDEG> I; // Order is Ixx, Iyy, Izz, Ixy, Ixz, Iyz
 
-    inline MomentOfInertia operator+(const MomentOfInertia& moi) const
+    MomentOfInertia operator+(const MomentOfInertia& moi) const
     {
         MomentOfInertia output;
         for(unsigned idx = 0; idx < NDEG; idx++)
@@ -96,72 +107,13 @@ struct MomentOfInertia
         return output;
     }
 
-    inline Eigen::Matrix3d get_inertia_matrix() const;
+    void operator=(const MomentOfInertia& moi)
+    {
+        memset(I.data(), moi.I.data(), NDEG*sizeof(double));
+    }
+
+    Eigen::Matrix3d get_inertia_matrix() const;
 };
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[3] = -this->I[3];
-    data[2] = data[6] = -this->I[4];
-    data[5] = data[7] = -this->I[5];
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[3] = 0.0;
-    data[2] = data[6] = -this->I[3];
-    data[5] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = data[4] = this->I[0];
-    data[8] = this->I[1];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = data[4] = data[8] = this->I[0];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
 
 template<MOMENT_CONSTANTS NDEG>
 struct Inertia
@@ -181,129 +133,82 @@ struct Inertia
     */
     MomentOfInertia<NDEG> moment_of_inertia;
 
-    inline void operator=(const Inertia<NDEG>& inertia) const
+    void operator=(const Inertia<NDEG>& inertia) const
     {
         this->mass = inertia.mass;
         this->center_of_mass = inertia.center_of_mass;
         memcpy(this->moment_of_inertia.I.data(),inertia.moment_of_inertia.I.data(),NDEG*sizeof(double));
     }
 
-    inline Inertia<MOMENT_CONSTANTS::FULL> operator+(const Inertia<NDEG>& inertia) const
-    {
-        Inertia<MOMENT_CONSTANTS::FULL> output;
-
-        // Get mass first
-        output.mass = this->mass + inertia.mass;
-
-        // Compute center of mass
-        output.center_of_mass = this->center_of_mass*this->mass + inertia.center_of_mass*inertia.mass;
-        output.center_of_mass *= (1.0/output.mass);
-
-        output.moment_of_inertia = this->moment_of_inertia + inertia.moment_of_inertia;
-
-        Eigen::Vector3d r = this->center_of_mass - output.center_of_mass;
-        Eigen::Vector3d mr = r*this->mass;
-        double mr2 = mr.dot(r);
-        output.moment_of_inertia.I[0] += mr2;
-        output.moment_of_inertia.I[1] += mr2;
-        output.moment_of_inertia.I[2] += mr2;
-
-        output.moment_of_inertia.I[0] -= mr.x()*r.x();
-        output.moment_of_inertia.I[1] -= mr.y()*r.y();
-        output.moment_of_inertia.I[2] -= mr.z()*r.z();
-        output.moment_of_inertia.I[3] -= mr.x()*r.y();
-        output.moment_of_inertia.I[4] -= mr.x()*r.z();
-        output.moment_of_inertia.I[5] -= mr.y()*r.z();
-
-        r = inertia.center_of_mass - output.center_of_mass;
-        mr = r*inertia.mass;
-        mr2 = mr.dot(r);
-        output.moment_of_inertia.I[0] += mr2;
-        output.moment_of_inertia.I[1] += mr2;
-        output.moment_of_inertia.I[2] += mr2;
-
-        output.moment_of_inertia.I[0] -= mr.x()*r.x();
-        output.moment_of_inertia.I[1] -= mr.y()*r.y();
-        output.moment_of_inertia.I[2] -= mr.z()*r.z();
-        output.moment_of_inertia.I[3] -= mr.x()*r.y();
-        output.moment_of_inertia.I[4] -= mr.x()*r.z();
-        output.moment_of_inertia.I[5] -= mr.y()*r.z();
-
-        return output;
-    }
+    Inertia<MOMENT_CONSTANTS::FULL> operator+(const Inertia<NDEG>& inertia) const;
 
 };
 
+
+namespace body
+{
+    void get_orientation_rate(const Eigen::Vector3d& angular_velocity,
+        const Eigen::Quaterniond& orientation,
+        double* q_dot);
+
+
+}
 
 /**
  * @brief 
  * 
  */
 template<MOMENT_CONSTANTS NDEG>
-class Body : Fixed_Size_Dynamics<17 + NDEG>
+struct Body : virtual Body_Base<double>
 {
-public:
-
-    static void get_orientation_rate(const Eigen::Vector3d& angular_velocity, 
-                                     const Eigne::Quaterniond& orientation,
-                                     double* q_dot)
-    {
-
-        Eigen::Matrix4d angular_matrix {
-            {-angular_velocity.x(), -angular_velocity.y(), -angular_velocity.z(), 0.0},
-            {0.0, angular_velocity.z(), -angular_velocity.y(), angular_velocity.x()},
-            {-angular_velocity.z(), 0.0, angular_velocity.x(), angular_velocity.y()},
-            {angular_velocity.y(), -angular_velocity.x(), 0.0, angular_velocity.z()}
-        }; // outer product w x q
-
-        Eigen::Map<Eigen::Vector4d> quat(orientation.coeffs().data());
-
-        Eigen::Vector4d mult = angular_matrix*quat;
-
-        auto q = mult.data();
-        q_dot[0] = q[0]*0.5;
-        q_dot[1] = q[1]*0.5;
-        q_dot[2] = q[2]*0.5;
-        q_dot[3] = q[3]*0.5;
-    }
-
-protected:
+    static constexpr unsigned N_STATES = 17 + NDEG;
 
     union 
     {
-        std::array<double,17 + NDEG> _state;
-        struct 
+        alignas(32) std::array<double, 17 + NDEG> state;
+        struct alignas(32)
         {
-            Eigen::Vector3d _position;
+            Eigen::Vector3d position;
 
-            Eigen::Vector3d _velocity;
+            Eigen::Vector3d velocity;
 
-            Eigen::Quaterniond _orientation;
+            Eigen::Quaterniond orientation;
 
-            Eigen::Vector3d _angular_velocity;
+            Eigen::Vector3d angular_velocity;
 
-            Inertia<NDEG> _inertia;
+            Inertia<NDEG> inertia;
         };
     };
 
-    Eigen::Vector3d _acceleration;
+    Eigen::Vector3d acceleration;
 
-    Eigen::Vector3d _angular_acceleration;
+    Eigen::Vector3d angular_acceleration;
 
-    Inertia<NDEG> _inertia_rate;
+    Inertia<NDEG> inertia_rate;
+
+    void get_state_rate(double* dx) override
+    {
+        memcpy(dx,this->velocity.data(),3*sizeof(double));
+        memcpy(dx + 3,this->acceleration.data(),3*sizeof(double));
+        body::get_orientation_rate(angular_velocity, orientation, dx + 6);
+        memcpy(dx + 10,this->angular_acceleration.data(),3*sizeof(double));
+        dx[13] = this->inertia_rate.mass;
+        memcpy(dx + 14,this->inertia_rate.center_of_mass.data(),3*sizeof(double));
+        memcpy(dx + 17,this->inertia_rate.moment_of_inertia.I.data(), NDEG*sizeof(double));
+    }
+};
+
+
+/**
+ * @brief
+ *
+ */
+template<MOMENT_CONSTANTS NDEG>
+class Body_Dynamics : protected virtual Body<NDEG>,  Fixed_Size_Dynamics<17 + NDEG>
+{
+protected:
 
     double _time;
-
-    void get_state_rate(double* dx)
-    {
-        memcpy(dx,this->_velocity.data(),3*sizeof(double));
-        memcpy(dx + 3,this->_acceleration.data(),3*sizeof(double));
-        get_orientation_rate(_angular_velocity, _orientation, dx + 6);
-        memcpy(dx + 10,this->_angular_acceleration.data(),3*sizeof(double));
-        dx[13] = this->_inertia_rate.mass;
-        memcpy(dx + 14,this->_inertia_rate.center_of_mass.data(),3*sizeof(double));
-        memcpy(dx + 17,this->_inertia_rate.moment_of_inertia.I.data(),NDEG*sizeof(double));
-    }
 
     virtual void compute_state_rate() = 0;
 
@@ -314,7 +219,7 @@ protected:
 
 public:
 
-    bool set_state(const std::array<double, 17 + NDEG>& x, const double& time, std::array<double,17 + NDEG>& dx) override
+    bool set_state(const std::array<double, 17 + NDEG>& x, const double& time, std::array<double, 17 + NDEG>& dx) override
     {
         this->_state = x;
         this->_time = time;
