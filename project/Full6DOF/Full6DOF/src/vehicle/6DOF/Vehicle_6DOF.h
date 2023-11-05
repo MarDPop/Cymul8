@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "../../physics/Body.h"
+#include "../../physics/Action.h"
 #include "../Vehicle.h"
-#include "../Action.h"
 #include "Aerodynamics.h"
 #include "Propulsion.h"
 
@@ -16,8 +16,6 @@ protected:
     std::unique_ptr<Aerodynamics> _aerodynamics;
 
     std::unique_ptr<Propulsion> _propulsion;
-
-    BodyAction _action_sum;
 
 public:
 
@@ -49,8 +47,6 @@ protected:
 
     P _propulsion;
 
-    BodyAction _action_sum;
-
 public:
 
     void operator()(const double* x, const double t, double* dx)
@@ -60,5 +56,10 @@ public:
 
         _aerodynamics.update(_environment, t);
         _propulsion.update(_environment, t);
+
+        BodyAction sumActions = _aerodynamics.get_action() + 
+                                _propulsion.get_action();
+
+
     }
 };

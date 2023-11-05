@@ -1,6 +1,12 @@
 #pragma once
 
 #include "../../lib/Eigen/Dense"
+#include "Coordinates.h"
+
+namespace WGS84
+{
+
+}
 
 class Geometry
 {

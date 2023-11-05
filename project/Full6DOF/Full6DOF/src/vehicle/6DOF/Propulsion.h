@@ -12,6 +12,5 @@ protected:
 
 public:
 
-    Propulsion();
-    virtual ~Propulsion();
+
 };

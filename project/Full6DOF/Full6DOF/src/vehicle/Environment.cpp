@@ -1,6 +1,6 @@
 #include "Environment.h"
 
-void Environment::update_launch(const Eigen::Vector3d& position,
+void Environment::update_launch_landing(const Eigen::Vector3d& position,
     const Eigen::Vector3d& velocity,
     double talo)
 {

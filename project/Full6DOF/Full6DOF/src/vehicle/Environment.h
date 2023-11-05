@@ -6,18 +6,11 @@
 
 struct AeroData
 {
-    Air air;
+    Eigen::Vector3d air_velocity_ecef;
     double airspeed;
     double mach;
     double dynamic_pressure;
     double impact_pressure;
-};
-
-struct LaunchData
-{
-    Coordinate::Geodetic launch_lla;
-    EpochTime launch_time;
-    SolarSystemBody* launch_body;
 };
 
 class Environment
@@ -39,6 +32,10 @@ private:
 
     SolarSystemBody* _current_planet;
 
+    EpochTime _reference_time;
+
+    Coordinate::GeocentricFixed _reference_ground;
+
     double _TALO;
 
     Coordinate::GeocentricInertial _ECI;
@@ -53,15 +50,15 @@ private:
 
     Eigen::Vector3d _frame_acceleration; // includes gravity
 
+    Air _air;
+
     AeroData _aero;
 
-    double _radiation_pressure;
-
-    std::unique_ptr<LaunchData> _launch;
+    double _radiation_pressure = 0.0;
 
     STATE _current_state;
 
-    void update_launch( const Eigen::Vector3d& position, 
+    void update_launch_landing( const Eigen::Vector3d& position, 
                         const Eigen::Vector3d& velocity,
                         double talo);
 
@@ -86,12 +83,12 @@ private:
         double talo);
 
 public:
-    
+   
     void set_launch(EpochTime launch_time,
                     Coordinate::Geodetic launch)
     {
-        _launch_time = launch_time;
-        _launch_lla = launch;
+        _reference_time = launch_time;
+        _reference_ground = launch;
     }
 
     void set_radation_pressure(double radiation_pressure)

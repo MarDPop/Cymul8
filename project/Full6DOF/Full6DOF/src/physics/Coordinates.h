@@ -31,36 +31,51 @@ namespace Coordinate
             orientation(_orientation), location(_location) {}
     };
 
-    typedef Eigen::Vector3d _3D;
-
-    class GeocentricFixed : public virtual Eigen::Vector3d
+    union GeocentricFixed
     {
-    public:
-
+        Eigen::Vector3d vec;
+        struct 
+        {
+            double x;
+            double y;
+            double z;
+        };
     };
 
-    class GeocentricInertial : public virtual Eigen::Vector3d
+    union GeocentricInertial
     {
-    public:
-
+        Eigen::Vector3d vec;
+        struct
+        {
+            double x;
+            double y;
+            double z;
+        };
     };
 
-    class Geodetic : public virtual Eigen::Vector3d
+    class Geodetic
     {
-    public:
-
+        double latitude;
+        double longitude;
+        double altitude;
     };
 
-    class ENU : public virtual Eigen::Vector3d
+    union ENU
     {
-    public:
-
+        Eigen::Vector3d vec;
+        struct
+        {
+            double east;
+            double north;
+            double up;
+        };
     };
 
-    class Spherical : public virtual Eigen::Vector3d
+    struct Spherical
     {
-    public:
-
+        double radius;
+        double polar;
+        double azimuth;
     };
 
 }
