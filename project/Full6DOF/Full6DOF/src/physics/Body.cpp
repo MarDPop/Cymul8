@@ -1,91 +1,5 @@
 #include "Body.h"
 
-bool Body_Point_Mass_Dynamics::set_state(const std::array<double, 7>& x, const double& time, std::array<double, 7>& dx)
-{
-    memcpy(this->position.data(), &x[0], 3 * sizeof(double));
-    memcpy(this->velocity.data(), &x[3], 3 * sizeof(double));
-    this->mass = x[6];
-    this->time = time;
-
-    this->compute_acceleration();
-    this->compute_mass_rate();
-
-    dx[0] = x[3];
-    dx[1] = x[4];
-    dx[2] = x[5];
-    dx[3] = _acceleration[0];
-    dx[4] = _acceleration[1];
-    dx[5] = _acceleration[2];
-    dx[6] = _mass_rate;
-
-    return this->stop_conditions();
-}
-
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[3] = -this->I[3];
-    data[2] = data[6] = -this->I[4];
-    data[5] = data[7] = -this->I[5];
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[3] = 0.0;
-    data[2] = data[6] = -this->I[3];
-    data[5] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = this->I[0];
-    data[4] = this->I[1];
-    data[8] = this->I[2];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = data[4] = this->I[0];
-    data[8] = this->I[1];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
-
-template<>
-inline Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_inertia_matrix() const
-{
-    Eigen::Matrix3d inertia;
-    double* data = inertia.data();
-    data[0] = data[4] = data[8] = this->I[0];
-    data[1] = data[2] = data[3] = 0.0;
-    data[5] = data[6] = data[7] = 0.0;
-    return inertia;
-}
-
 template<MOMENT_CONSTANTS NDEG>
 Inertia<MOMENT_CONSTANTS::FULL> Inertia<NDEG>::operator+(const Inertia<NDEG>& inertia) const
 {
@@ -144,6 +58,178 @@ Inertia<MOMENT_CONSTANTS::FULL> Inertia<MOMENT_CONSTANTS::AXISYMMETRIC>::operato
 
 template<>
 Inertia<MOMENT_CONSTANTS::FULL> Inertia<MOMENT_CONSTANTS::EQUAL>::operator+(const Inertia<MOMENT_CONSTANTS::EQUAL>& inertia) const;
+
+template<>
+ Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_inertia_matrix() const
+{
+    Eigen::Matrix3d inertia;
+    double* data = inertia.data();
+    data[0] = this->I[0];
+    data[4] = this->I[1];
+    data[8] = this->I[2];
+    data[1] = data[3] = -this->I[3];
+    data[2] = data[6] = -this->I[4];
+    data[5] = data[7] = -this->I[5];
+    return inertia;
+}
+
+template<>
+ Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_inertia_matrix() const
+{
+     // symmetry about 
+    Eigen::Matrix3d inertia;
+    double* data = inertia.data();
+    data[0] = this->I[0];
+    data[4] = this->I[1];
+    data[8] = this->I[2];
+    data[1] = data[3] = 0.0;
+    data[2] = data[6] = -this->I[3]; // 
+    data[5] = data[7] = 0.0;
+    return inertia;
+}
+
+template<>
+ Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_inertia_matrix() const
+{
+    Eigen::Matrix3d inertia;
+    double* data = inertia.data();
+    data[0] = this->I[0];
+    data[4] = this->I[1];
+    data[8] = this->I[2];
+    data[1] = data[2] = data[3] = 0.0;
+    data[5] = data[6] = data[7] = 0.0;
+    return inertia;
+}
+
+template<>
+ Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_inertia_matrix() const
+{
+    Eigen::Matrix3d inertia;
+    double* data = inertia.data();
+    data[0] = this->I[0];
+    data[4] = data[8] = this->I[1];
+    data[1] = data[2] = data[3] = 0.0;
+    data[5] = data[6] = data[7] = 0.0;
+    return inertia;
+}
+
+template<>
+ Eigen::Matrix3d MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_inertia_matrix() const
+{
+    Eigen::Matrix3d inertia;
+    double* data = inertia.data();
+    data[0] = data[4] = data[8] = this->I[0];
+    data[1] = data[2] = data[3] = 0.0;
+    data[5] = data[6] = data[7] = 0.0;
+    return inertia;
+}
+
+ template<>
+ void MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_angular_acceleration_inertial(const Eigen::Quaterniond& orientation,
+     const Eigen::Vector3d& angular_velocity_inertial,
+     const Eigen::Vector3d& torque_inertial,
+     double* angular_acceleration_inertial) const
+ {
+
+ }
+
+ template<>
+ void MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_angular_acceleration_inertial(const Eigen::Quaterniond& orientation,
+     const Eigen::Vector3d& angular_velocity_inertial,
+     const Eigen::Vector3d& torque_inertial,
+     double* angular_acceleration_inertial) const
+ {
+
+ }
+
+ template<>
+ void MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_angular_acceleration_inertial(const Eigen::Quaterniond& orientation,
+     const Eigen::Vector3d& angular_velocity_inertial,
+     const Eigen::Vector3d& torque_inertial,
+     double* angular_acceleration_inertial) const
+ {
+
+ }
+
+ template<>
+ void MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_angular_acceleration_inertial(const Eigen::Quaterniond& orientation,
+     const Eigen::Vector3d& angular_velocity_inertial,
+     const Eigen::Vector3d& torque_inertial,
+     double* angular_acceleration_inertial) const
+ {
+
+ }
+
+ template<>
+ void MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_angular_acceleration_inertial(const Eigen::Quaterniond& orientation,
+     const Eigen::Vector3d& angular_velocity_inertial,
+     const Eigen::Vector3d& torque_inertial,
+     double* angular_acceleration_inertial) const
+ {
+     
+ }
+
+template<>
+void MomentOfInertia<MOMENT_CONSTANTS::FULL>::get_angular_acceleration_body(const Eigen::Vector3d& angular_velocity,
+     const Eigen::Vector3d& torque_body,
+     double* angular_acceleration) const
+{
+    Eigen::Map< Eigen::Vector3d> omega_dot(angular_acceleration);
+    Eigen::Matrix3d I = this->get_inertia_matrix();
+    Eigen::Vector3d wxIw = angular_velocity.cross(I*angular_velocity);
+    omega_dot = I.lu().solve(torque_body - wxIw); // see if LDLT could be used instead
+}
+
+template<>
+void MomentOfInertia<MOMENT_CONSTANTS::PLANE_SYMMETRY>::get_angular_acceleration_body(const Eigen::Vector3d& angular_velocity,
+     const Eigen::Vector3d& torque_body,
+     double* angular_acceleration) const
+{
+    Eigen::Map< Eigen::Vector3d> omega_dot(angular_acceleration);
+    Eigen::Matrix3d I = this->get_inertia_matrix();
+    Eigen::Vector3d wxIw = angular_velocity.cross(I * angular_velocity);
+    omega_dot = I.lu().solve(torque_body - wxIw); // see if LDLT could be used instead
+    // TODO: replace with more optimum version
+}
+
+template<>
+void MomentOfInertia<MOMENT_CONSTANTS::PRINCIPAL_AXIS>::get_angular_acceleration_body(const Eigen::Vector3d& angular_velocity,
+    const Eigen::Vector3d& torque_body,
+    double* angular_acceleration) const
+{
+    Eigen::Vector3d M_minus_wxIw = torque_body;
+    M_minus_wxIw[0] -= (this->I[2] - this->I[1])*angular_velocity[2]*angular_velocity[1];
+    M_minus_wxIw[1] -= (this->I[0] - this->I[2])*angular_velocity[2]*angular_velocity[0];
+    M_minus_wxIw[2] -= (this->I[1] - this->I[0])*angular_velocity[1]*angular_velocity[0];
+
+    angular_acceleration[0] = M_minus_wxIw[0] / this->I[0];
+    angular_acceleration[1] = M_minus_wxIw[1] / this->I[1];
+    angular_acceleration[2] = M_minus_wxIw[2] / this->I[2];
+}
+
+template<>
+void MomentOfInertia<MOMENT_CONSTANTS::AXISYMMETRIC>::get_angular_acceleration_body(const Eigen::Vector3d& angular_velocity,
+     const Eigen::Vector3d& torque_body,
+     double* angular_acceleration) const
+{
+    double dIw = (this->I[0] - this->I[1])*angular_velocity[0];
+
+    double inv_I = 1.0/this->I[1];
+    angular_acceleration[0] = torque_body[0]/this->I[0];
+    angular_acceleration[1] = (torque_body[1] + dIw*angular_velocity[2])*inv_I;
+    angular_acceleration[2] = (torque_body[2] - dIw*angular_velocity[1])*inv_I;
+}
+
+template<>
+void MomentOfInertia<MOMENT_CONSTANTS::EQUAL>::get_angular_acceleration_body(const Eigen::Vector3d& angular_velocity,
+     const Eigen::Vector3d& torque_body,
+     double* angular_acceleration) const
+{
+    double inv_I = 1.0/this->I[0];
+    angular_acceleration[0] = torque_body[0]*inv_I;
+    angular_acceleration[1] = torque_body[1]*inv_I;
+    angular_acceleration[2] = torque_body[2]*inv_I;
+}
 
 
 #define METHOD 1
@@ -210,3 +296,12 @@ void body::get_orientation_rate(const Eigen::Vector3d& angular_velocity,
 }
 
 #endif
+
+
+void body::get_angular_acceleration(const Eigen::Vector3d& angular_velocity,
+    const Eigen::Matrix3d& I,
+    const Eigen::Vector3d& torque,
+    double* angular_acceleration)
+{
+
+}

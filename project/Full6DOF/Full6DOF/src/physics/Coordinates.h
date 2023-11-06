@@ -40,6 +40,17 @@ namespace Coordinate
             double y;
             double z;
         };
+
+        GeocentricFixed() {}
+        GeocentricFixed(const GeocentricFixed& x) : 
+            vec(x.vec){}
+        GeocentricFixed(GeocentricFixed&& x) :
+            vec(std::move(x.vec)) {}
+
+        void operator=(const GeocentricFixed& x)
+        {
+            vec = x.vec;
+        }
     };
 
     union GeocentricInertial
@@ -51,9 +62,20 @@ namespace Coordinate
             double y;
             double z;
         };
+
+        GeocentricInertial() {}
+        GeocentricInertial(const GeocentricInertial& x) :
+            vec(x.vec) {}
+        GeocentricInertial(GeocentricInertial&& x) :
+            vec(std::move(x.vec)) {}
+
+        void operator=(const GeocentricInertial& x)
+        {
+            vec = x.vec;
+        }
     };
 
-    class Geodetic
+    struct Geodetic
     {
         double latitude;
         double longitude;
@@ -69,6 +91,17 @@ namespace Coordinate
             double north;
             double up;
         };
+
+        ENU() {}
+        ENU(const ENU& x) :
+            vec(x.vec) {}
+        ENU(ENU&& x) :
+            vec(std::move(x.vec)) {}
+
+        void operator=(const ENU& x)
+        {
+            vec = x.vec;
+        }
     };
 
     struct Spherical

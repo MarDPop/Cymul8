@@ -5,7 +5,11 @@
 
 namespace WGS84
 {
+    Coordinate::Geodetic ECEF2LLA(const Coordinate::GeocentricFixed& ecef);
 
+    Coordinate::GeocentricFixed LLA2ECEF(const Coordinate::Geodetic& lla);
+
+    double vincentyFormulae(double long1, double lat1, double long2, double lat2);
 }
 
 class Geometry

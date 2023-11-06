@@ -3,6 +3,7 @@
 #include <memory>
 #include "../physics/Coordinates.h"
 #include "../physics/SolarSystem.h"
+#include "../physics/Geometry.h"
 
 struct AeroData
 {
@@ -17,7 +18,7 @@ class Environment
 {
 public:
 
-    enum STATE
+    enum class STATE
     {
         NONE = -1,
         LAUNCH_LANDING = 0,
@@ -52,11 +53,13 @@ private:
 
     Air _air;
 
-    AeroData _aero;
+    AeroData _aero_data;
 
     double _radiation_pressure = 0.0;
 
-    STATE _current_state;
+    STATE _current_state = STATE::NONE;
+
+    bool _use_aero = true;
 
     void update_launch_landing( const Eigen::Vector3d& position, 
                         const Eigen::Vector3d& velocity,
@@ -88,12 +91,32 @@ public:
                     Coordinate::Geodetic launch)
     {
         _reference_time = launch_time;
-        _reference_ground = launch;
+        _reference_ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
     }
 
     void set_radation_pressure(double radiation_pressure)
     {
         _radiation_pressure = radiation_pressure;
+    }
+
+    const Air& get_air() const
+    {
+        return _air;
+    }
+
+    const AeroData& get_aero_data() const
+    {
+        return _aero_data;
+    }
+
+    const Eigen::Vector3d get_frame_acceleration() const
+    {
+        return _frame_acceleration;
+    }
+
+    bool in_air() const
+    {
+        return _use_aero;
     }
 
     void set_state(STATE state);

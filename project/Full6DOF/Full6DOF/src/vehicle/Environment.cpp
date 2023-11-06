@@ -48,19 +48,19 @@ void Environment::set_state(STATE state)
     _current_state = state;
     switch (state)
     {
-    case LAUNCH_LANDING:
-        update = &Environment::update_launch;
+    case STATE::LAUNCH_LANDING:
+        update = &Environment::update_launch_landing;
         break;
-    case ATMOSPHERIC:
+    case STATE::ATMOSPHERIC:
         update = &Environment::update_atm;
         break;
-    case LOW_ORBIT:
+    case STATE::LOW_ORBIT:
         update = &Environment::update_low_orbit;
         break;
-    case HIGH_ORBIT:
+    case STATE::HIGH_ORBIT:
         update = &Environment::update_high_orbit;
         break;
-    case INTERPLANETARY:
+    case STATE::INTERPLANETARY:
         update = &Environment::update_interplanetary;
         break;
     default:
