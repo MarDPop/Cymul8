@@ -4,7 +4,7 @@
 
 namespace fmath
 {
-    float inv_fast(float x) {
+    inline float inv_fast(float x) {
         union { float f; int i; } v;
         float w, sx;
         int m;

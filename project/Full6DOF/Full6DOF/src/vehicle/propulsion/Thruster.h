@@ -13,6 +13,15 @@ class Thruster
 
 public: 
 
+    Thruster() {}
+
+    Thruster(double thrust, double mass_rate) :
+        _thrust(thrust),
+        _mass_rate(mass_rate)
+    {}
+
+    virtual ~Thruster() {}
+
     virtual void update(const Air& air, const AeroData& aero_data, double t) {}
 
     virtual void start()
