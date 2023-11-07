@@ -10,7 +10,12 @@ class Aerodynamics
 
 public:
 
-    virtual void update(const Air& air, const AeroData& aeroData, double t) = 0;
+    Aerodynamics()
+    {
+        _action.zero();
+    }
+
+    virtual void update(const Air& air, const AeroData& aeroData, double t) {}
 
     const T& get_action() const
     {

@@ -5,15 +5,15 @@
 class Thruster
 {
 
-    double _thrust;
+    double _thrust = 0;
 
-    double _mass_rate;
+    double _mass_rate = 0;
 
-    bool _active;
+    bool _active = false;
 
 public: 
 
-    virtual void update(const Air& air, const AeroData& aero_data, double t) = 0;
+    virtual void update(const Air& air, const AeroData& aero_data, double t) {}
 
     virtual void start()
     {

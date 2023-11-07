@@ -11,11 +11,13 @@ class Tank
 
 public:
 
-    virtual void update(double m, double t, const Eigen::Vector3d& acceleration_body) = 0;
-
     const Inertia<NDEG>& get_inertia() const
     {
         return _inertia;
     }
+
+    virtual void update(double m, double t) = 0;
+
+    virtual Inertia<NDEG> get_inertia_rate(double mass_rate, const Eigen::Vector3d& acceleration_body) const = 0;
 
 };

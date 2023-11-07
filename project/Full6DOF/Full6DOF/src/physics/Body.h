@@ -14,7 +14,7 @@
      - for Plane Symmetry the plane is assumed to be in the XZ axis
      - for Axisymmetric the axis is assumed to be on the X axis
  */
-enum class MOMENT_CONSTANTS : unsigned
+enum MOMENT_CONSTANTS : unsigned
 {
     EQUAL = 1u,
     AXISYMMETRIC = 2u,
@@ -89,6 +89,8 @@ struct Inertia
 template<typename Float, class S>
 class Body_Base
 {
+protected:
+
     union
     {
         alignas(32) std::array<Float, S::N_STATES> _state_vector;
@@ -141,7 +143,7 @@ struct State_Point
     Float mass;
 };
 
-struct State_Rigid_Body_
+struct State_Rigid_Body
 {
     static constexpr unsigned N_STATES = 14;
 
@@ -157,7 +159,7 @@ struct State_Rigid_Body_
 };
 
 template<MOMENT_CONSTANTS NDEG>
-struct State_Rigid_Body
+struct State_Rigid_Body_
 {
     static constexpr unsigned N_STATES = 17 + NDEG;
 
@@ -177,7 +179,7 @@ struct State_Rigid_Body
  * 
  */
 template<typename Float>
-class Body_Point_Mass : virtual Body_Base<Float, State_Point<Float>>
+class Body_Point_Mass : public virtual Body_Base<Float, State_Point<Float>>
 {
 protected:
     
@@ -196,7 +198,7 @@ public:
 };
 
 template<MOMENT_CONSTANTS NDEG>
-class Body_Mass_Dependent_Inertia : virtual Body_Base<double, State_Rigid_Body_>
+class Body_Mass_Dependent_Inertia : public virtual Body_Base<double, State_Rigid_Body>
 {
 protected:
 
@@ -241,7 +243,7 @@ public:
  * 
  */
 template<MOMENT_CONSTANTS NDEG>
-class Body : virtual Body_Base<double, State_Rigid_Body<NDEG>>
+class Body : public virtual Body_Base<double, State_Rigid_Body_<NDEG>>
 {
 protected:
 

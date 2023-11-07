@@ -63,11 +63,11 @@ public:
         const B& estimated_state,
         const double* control_states,
         const double time,
-        double* dx_control) = 0;
+        double* dx_control) {}
 };
 
 template<class B, class G, class N, class C>
-class GuidanceNavigationControl_T : public virtual GNC
+class GuidanceNavigationControl_T : public virtual GNC<B>
 {
     static_assert(std::is_base_of<Guidance<B>, G>::value, "G not derived from Guidance");
     static_assert(std::is_base_of<Navigation<B>, N>::value, "N not derived from Navigation");
@@ -82,6 +82,21 @@ class GuidanceNavigationControl_T : public virtual GNC
     C _control;
 
 public:
+
+    const G& get_guidance() const
+    {
+        *_guidance;
+    }
+
+    const N& get_navigation() const
+    {
+        *_navigation;
+    }
+
+    const C& get_control() const
+    {
+        *_control;
+    }
 
     void set_delay(double delay)
     {
@@ -111,22 +126,32 @@ public:
 };
 
 template<class B>
-class GuidanceNavigationControl : public virtual GNC
+class GuidanceNavigationControl : public virtual GNC<B>
 {
 
     double _delay = 0;
 
-    std::unique_ptr<Guidance<B>> _guidance; 
+    std::unique_ptr<Guidance<B>> _guidance = std::make_unique<Guidance<B>>();
 
-    std::unique_ptr<Navigation<B>> _navigation;
+    std::unique_ptr<Navigation<B>> _navigation = std::make_unique<Guidance<B>>();
 
-    std::unique_ptr<Control<B>> _control;
+    std::unique_ptr<Control<B>> _control = std::make_unique<Guidance<B>>();
 
 public:
+
+    const Guidance<B>& get_guidance() const
+    {
+        *_guidance;
+    }
 
     void set_guidance(std::unique_ptr<Guidance<B>> guidance)
     {
         _guidance = std::move(guidance);
+    }
+
+    const Navigation<B>& get_navigation() const
+    {
+        *_navigation;
     }
 
     void set_navigation(std::unique_ptr<Navigation<B>> navigation)
@@ -134,6 +159,11 @@ public:
         _navigation = std::move(navigation);
     }
 
+    const Control<B>& get_control() const
+    {
+        *_control;
+    }
+    
     void set_control(std::unique_ptr<Control<B>> control)
     {
         _control = std::move(control);
@@ -144,10 +174,6 @@ public:
         _delay = delay;
     }
 
-    unsigned get_control_states() const override
-    {
-        return C->N_CONTROL_STATES;
-    }
 
     void update(const double* control_states, const double time, double* dx_control) override
     {
