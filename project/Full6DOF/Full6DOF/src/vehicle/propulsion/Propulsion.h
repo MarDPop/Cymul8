@@ -26,7 +26,7 @@ public:
     void update_thrust(const Air& air, const AeroData& aero_data, double t)
     {
         _thruster.update(air, aero_data, t);
-        force = _thrust_vector*_thruster.get_thrust();
+        _action.force = _thrust_vector*_thruster.get_thrust();
     }
 
     void set_thrust_vector(const Eigen::Vector3d& __thrust_vector)

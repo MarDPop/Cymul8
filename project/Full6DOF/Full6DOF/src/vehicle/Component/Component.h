@@ -17,12 +17,6 @@ class Component
 
 public:
 
-	virtual void update(const Vehicle_Component& vehicle, double time) = 0;
-
-	const BodyAction& get_action() const
-	{
-		return _action;
-	}
 
 	const BodyAction& get_action() const
 	{

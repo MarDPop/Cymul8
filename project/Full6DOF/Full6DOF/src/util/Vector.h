@@ -31,7 +31,7 @@ public:
         return _data;
     }
 
-    const T* data() const
+    T* data() 
     {
         return _data;
     }

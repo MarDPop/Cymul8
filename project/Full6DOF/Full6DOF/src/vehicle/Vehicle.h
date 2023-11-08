@@ -45,7 +45,7 @@ public:
         return _environment;
     }
 
-    void operator()(const Float* x, const Float t, Float* dx)
+    void operator()(const double* x, const double t, double* dx)
     {
         set_state(x);
 
@@ -66,7 +66,7 @@ template<class T, class A, class GNC>
 class Vehicle_3DOF_T : public virtual Vehicle<Body_Point_Mass<double>, GNC>
 {
     static_assert(std::is_base_of<Thruster>, T > ::value, "P not derived from Propulsion");
-    static_assert(std::is_base_of<Aerodynamics<Eigen::Vector3d>>, A > ::value, "A not derived from Aerodynamics");
+    static_assert(std::is_base_of<Aerodynamics<Eigen::Vector3d>, A > ::value, "A not derived from Aerodynamics");
 
 protected:
 
@@ -107,7 +107,7 @@ public:
 template<class A, class P, MOMENT_CONSTANTS NDEG, class GNC>
 class Vehicle_6DOF_T : public virtual Vehicle< Body_Mass_Dependent_Inertia<NDEG>, GNC>
 {
-    static_assert(std::is_base_of<Aerodynamics<BodyAction>>, A > ::value, "A not derived from Aerodynamics");
+    static_assert(std::is_base_of<Aerodynamics<BodyAction>, A > ::value, "A not derived from Aerodynamics");
     static_assert(std::is_base_of<Propulsion>, P > ::value, "P not derived from Propulsion");
 
 protected:
@@ -127,7 +127,6 @@ protected:
     * current principal moment of inertia  (kg m2)
     */
     MomentOfInertia<NDEG> _moment_of_inertia_delta;
-
 
     void update_accelerations(double t) override
     {

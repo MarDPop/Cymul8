@@ -86,49 +86,6 @@ struct Inertia
 
 };
 
-template<typename Float, class S>
-class Body_Base
-{
-protected:
-
-    union
-    {
-        alignas(32) std::array<Float, S::N_STATES> _state_vector;
-        alignas(32) S _state;
-    };
-
-public:
-
-    virtual void get_state_rate(Float* dx) = 0;
-
-    virtual void set_state(const Float* x)
-    {
-        memcpy(_state_vector.data(), x, sizeof(_state_vector));
-    }
-
-    const Float* get_state_vector() const
-    {
-        return _state_vector.data();
-    }
-
-    const S& get_state() const
-    {
-        return _state;
-    }
-};
-
-namespace body
-{
-    void get_orientation_rate(const Eigen::Vector3d& angular_velocity,
-        const Eigen::Quaterniond& orientation,
-        double* q_dot);
-
-    void get_angular_acceleration(const Eigen::Vector3d& angular_velocity,
-        const Eigen::Matrix3d& I,
-        const Eigen::Vector3d& torque,
-        double* angular_acceleration);
-}
-
 template<typename Float>
 struct State_Point
 {
@@ -174,6 +131,51 @@ struct State_Rigid_Body_
     Inertia<NDEG> inertia;
 };
 
+template<typename Float, typename State>
+class Body_Base
+{
+protected:
+
+    union
+    {
+        alignas(32) std::array<Float, State::N_STATES> _state_vector;
+        alignas(32) State _state;
+    };
+
+public:
+
+    virtual void get_state_rate(Float* dx) = 0;
+
+    virtual void set_state(const Float* x)
+    {
+        memcpy(_state_vector.data(), x, sizeof(_state_vector));
+    }
+
+    const Float* get_state_vector() const
+    {
+        return _state_vector.data();
+    }
+
+    const State& get_state() const
+    {
+        return _state;
+    }
+};
+
+namespace body
+{
+    void get_orientation_rate(const Eigen::Vector3d& angular_velocity,
+        const Eigen::Quaterniond& orientation,
+        double* q_dot);
+
+    void get_angular_acceleration(const Eigen::Vector3d& angular_velocity,
+        const Eigen::Matrix3d& I,
+        const Eigen::Vector3d& torque,
+        double* angular_acceleration);
+}
+
+
+
 /**
  * @brief 
  * 
@@ -191,9 +193,9 @@ public:
 
     void get_state_rate(Float* dx) override
     {
-        memcpy(dx, velocity.data(), 3*sizeof(Float));
-        memcpy(dx + 3, acceleration.data(), 3*sizeof(Float));
-        dx[6] = mass_rate;
+        memcpy(dx, _state.velocity.data(), 3*sizeof(Float));
+        memcpy(dx + 3, _acceleration.data(), 3*sizeof(Float));
+        dx[6] = _mass_rate;
     }
 };
 
@@ -224,16 +226,16 @@ public:
 
     void get_state_rate(double* dx) override
     {
-        memcpy(dx, this->velocity.data(), 3 * sizeof(double));
-        memcpy(dx + 3, this->acceleration.data(), 3 * sizeof(double));
-        body::get_orientation_rate(angular_velocity, orientation, dx + 6);
-        memcpy(dx + 10, this->angular_acceleration.data(), 3 * sizeof(double));
-        dx[13] = this->_mass_rate;
+        memcpy(dx, _state.velocity.data(), 3*sizeof(double));
+        memcpy(dx + 3, _acceleration.data(), 3* sizeof(double));
+        body::get_orientation_rate(_state.angular_velocity, _state.orientation, dx + 6);
+        memcpy(dx + 10, _angular_acceleration.data(), 3*sizeof(double));
+        dx[13] = _mass_rate;
     }
 
-    void set_state(const Float* x) override
+    void set_state(const double* x) override
     {
-        memcpy(state.data(), x, sizeof(state));
+        memcpy(_state_vector.data(), x, sizeof(_state_vector));
         this->update_inertia();
     }
 };
@@ -257,13 +259,13 @@ public:
 
     void get_state_rate(double* dx) override
     {
-        memcpy(dx,this->_state.velocity.data(),3*sizeof(double));
-        memcpy(dx + 3,this->_acceleration.data(),3*sizeof(double));
-        body::get_orientation_rate(angular_velocity, orientation, dx + 6);
-        memcpy(dx + 10,this->angular_acceleration.data(),3*sizeof(double));
-        dx[13] = this->inertia_rate.mass;
-        memcpy(dx + 14,this->inertia_rate.center_of_mass.data(),3*sizeof(double));
-        memcpy(dx + 17,this->inertia_rate.moment_of_inertia.I.data(), NDEG*sizeof(double));
+        memcpy(dx,_state.velocity.data(),3*sizeof(double));
+        memcpy(dx + 3,_acceleration.data(),3*sizeof(double));
+        body::get_orientation_rate(_state.angular_velocity, _state.orientation, dx + 6);
+        memcpy(dx + 10,_angular_acceleration.data(),3*sizeof(double));
+        dx[13] = _inertia_rate.mass;
+        memcpy(dx + 14,_inertia_rate.center_of_mass.data(),3*sizeof(double));
+        memcpy(dx + 17,_inertia_rate.moment_of_inertia.I.data(), NDEG*sizeof(double));
     }
 
 };
