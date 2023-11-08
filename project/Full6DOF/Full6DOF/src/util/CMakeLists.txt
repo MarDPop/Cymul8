@@ -1,6 +1,6 @@
 add_library(utilsLib STATIC
     functions.cpp
-)
+ "fixedPoint.h")
 
 set_target_properties(utilsLib PROPERTIES
     VERSION ${PROJECT_VERSION}

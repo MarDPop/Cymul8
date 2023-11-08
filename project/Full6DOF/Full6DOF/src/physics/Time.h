@@ -58,7 +58,7 @@ public:
 
     static constexpr unsigned JULIAN_DAY_SEC = 86400;
 
-    static constexpr unsigned JULIAN_DAY_SEC_D = 86400.0;
+    static constexpr double JULIAN_DAY_SEC_D = 86400.0;
 
     static constexpr long JULIAN_DAY_NANOSEC = JULIAN_DAY_SEC*SECONDS2NANOSECONDS;
 

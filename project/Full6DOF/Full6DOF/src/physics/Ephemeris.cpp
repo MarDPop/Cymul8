@@ -1,5 +1,7 @@
 #include "Ephemeris.h"
 
+#include "../util/functions.h"
+
 constexpr double TWOPI = 6.283185307179586476925286766559;
 
 double Ephemeris::trueAnomalyFromMeanAnomalyApprox(const double MA, const double eccentricity)
@@ -44,7 +46,7 @@ double Ephemeris::meanAnomalyFromEccentricAnomaly(const double EA, const double 
 
 double Ephemeris::eccentricAnomalyFromTrueAnomaly(const double TA, const double eccentricity)
 {
-    return atan((sqrt(1.0 - eccentricity * eccentricity) * sin(TA) / (1.0 + eccentricity * cos(TA));
+    return atan(sqrt(1.0 - eccentricity*eccentricity)*sin(TA) / (1.0 + eccentricity * cos(TA)));
 }
 
 double Ephemeris::meanAnomalyFromTrueAnomaly(const double TA, const double eccentricity)
@@ -74,7 +76,7 @@ std::array<double, 6> Ephemeris::elements2cartesian(const std::array<double, 6>&
     double radius = elements[0] * tmp / tmp2;
     double x = radius*ct;
     double y = radius*st;
-    tmp = sqrt(elements[6]*elements[0]*tmp)/(radius * tmp2);
+    tmp = sqrt(MU*elements[0]*tmp)/(radius * tmp2);
     double v_x = -st * tmp;
     double v_y = (elements[1] + ct) * tmp;
 
@@ -111,41 +113,47 @@ std::array<double, 6> Ephemeris::elements2cartesian(const std::array<double, 6>&
 std::array<double, 6> Ephemeris::cartesian2elements(const std::array<double, 6>& cartesian, const double MU)
 {
     std::array<double, 6> oe{};
-    std::array<double, 3> h = { cartesian[1] * cartesian[5] - cartesian[2] * cartesian[4], cartesian[2] * cartesian[3] - cartesian[0] * cartesian[5], cartesian[0] * cartesian[4] - cartesian[1] * cartesian[3] };
+    double h[3] = {cartesian[1]*cartesian[5] - cartesian[2]*cartesian[4],
+                   cartesian[2]*cartesian[3] - cartesian[0]*cartesian[5], 
+                   cartesian[0]*cartesian[4] - cartesian[1]*cartesian[3] };
 
     // std::array<double,2> n = {h[1],-h[0]}; // z is implicit 0
-    double v2 = cartesian[3] * cartesian[3] + cartesian[4] * cartesian[4] + cartesian[5] * cartesian[5];
-    double r_inv = 1.0 / sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
-    double rv = cartesian[0] * cartesian[3] + cartesian[1] * cartesian[4] + cartesian[2] * cartesian[5];
-    std::array<double, 3> e;
-    double tmp1 = v2 / cartesian[6] - r_inv;
-    double tmp2 = rv / cartesian[6];
-    e[0] = cartesian[0] * tmp1 + cartesian[3] * tmp2;
-    e[1] = cartesian[1] * tmp1 + cartesian[4] * tmp2;
-    e[2] = cartesian[2] * tmp1 + cartesian[5] * tmp2;
-    double egy = v2 / 2 - cartesian[6] * r_inv;
+    double v2 = func::dot3(&cartesian[3], &cartesian[3]);
+    double r_inv = 1.0 / func::mag3(cartesian.data());
+    double rv = func::dot3(cartesian.data(), &cartesian[3]);
+    double e[3];
+    const double invMU = 1.0 / MU;
+    double tmp1 = v2*invMU - r_inv;
+    double tmp2 = rv*invMU;
+    e[0] = cartesian[0]*tmp1 + cartesian[3]*tmp2;
+    e[1] = cartesian[1]*tmp1 + cartesian[4]*tmp2;
+    e[2] = cartesian[2]*tmp1 + cartesian[5]*tmp2;
+    double egy = v2*0.5 - MU*r_inv;
 
-    oe[0] = -cartesian[6] / (2 * egy);
-    oe[1] = sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
+    oe[0] = -MU / (2*egy);
+    oe[1] = func::mag3(e);
     double inv_e = 1 / oe[1];
-    double nmag = h[0] * h[0] + h[1] * h[1];
-    oe[2] = acos(h[2] / sqrt(nmag + h[2] * h[2]));
+    double nmag = h[0]*h[0] + h[1]*h[1];
+    oe[2] = acos(h[2] / sqrt(nmag + h[2]*h[2]));
 
     if (fabs(oe[2]) > 1e-9) {
         nmag = 1.0 / sqrt(nmag);
-        oe[3] = acos(h[1] * nmag);
-        if (h[0] > 0) {
+        oe[3] = acos(h[1]*nmag);
+        if (h[0] > 0) 
+        {
             oe[3] = TWOPI - oe[3];
         }
 
-        oe[4] = acos((h[1] * e[0] - h[0] * e[1]) * nmag * inv_e);
-        if (e[2] < 0) {
+        oe[4] = acos((h[1]*e[0] - h[0]*e[1])*nmag*inv_e);
+        if (e[2] < 0) 
+        {
             oe[4] = TWOPI - oe[4];
         }
     }
 
-    oe[5] = acos((e[0] * cartesian[0] + e[1] * cartesian[1] + e[2] * cartesian[2]) * r_inv * inv_e);
-    if (rv < 0) {
+    oe[5] = acos(func::dot3(e,cartesian.data())*r_inv*inv_e);
+    if (rv < 0) 
+    {
         oe[5] = TWOPI - oe[5];
     }
     return oe;

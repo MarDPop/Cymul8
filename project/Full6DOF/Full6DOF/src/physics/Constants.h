@@ -15,12 +15,12 @@ namespace CONSTANTS
     constexpr int C_ = 299792458; 
 
     constexpr double CS_FREQ = 9192631770; // Hertz , SI exact by definition
-    constexpr long CS_FREQ_ = 9192631770; 
+    constexpr long CS_FREQ_ = 9192631770L; 
 
     constexpr double FREQ_CANDELA = 540e12; // Hertz, monochromatic radiation of frequency for candela defintion
-    constexpr long FREQ_CANDELA = 540'000'000'000'000L;
+    constexpr long FREQ_CANDELA_ = 540'000'000'000'000L;
     constexpr double LUM_EFFICIENCY_CANDELA = 686; // lumens  / Watt
-    constexpr int LUM_EFFICIENCY_CANDELA = 686;
+    constexpr int LUM_EFFICIENCY_CANDELA_ = 686;
 
     // Other Exact Numbers
     constexpr double PI = 3.1415926535897932384626433832795;
