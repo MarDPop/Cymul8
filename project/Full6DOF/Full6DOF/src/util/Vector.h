@@ -76,7 +76,7 @@ public:
         memcpy(_data, copy._data, _size * sizeof(T));
     }
 
-    fixed_vector(fixed_vector&& copy) :
+    fixed_vector(fixed_vector&& copy) noexcept :
         _data(std::move(copy._data)),
         _size(copy._size)
     {}

@@ -12,9 +12,12 @@
 
 void test2()
 {
-    ode<Vehicle_3DOF_Standard, double> rocket;
-    // Vehicle_3DOF_Standard rocket;
-    // std::cout << rocket.get_num_states() << std::endl;
+    
+    Vehicle_3DOF_Standard rocket;
+
+    ode<Vehicle_3DOF_Standard, double> rocket_ode(rocket);
+
+
 }
 
 int main(int argc, char** argv) 

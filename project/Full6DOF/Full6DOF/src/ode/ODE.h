@@ -96,7 +96,7 @@ protected:
      * @brief records states and increments time to record
      * 
      */
-    inline void _record()
+    void _record()
     {
         _recording.states.push_back(_state);
         _recording.state_rates.push_back(_state_rate);
@@ -104,7 +104,7 @@ protected:
         _recording.time_record += _recording.recording_interval;
     }
 
-    inline void _reverse_to_time(double time)
+    void _reverse_to_time(double time)
     {
         double time_step_backwards = time - _time;
         for(unsigned i = 0; i < NSTATES; i++)
@@ -120,7 +120,7 @@ protected:
      * @return true if state is valid
      * @return false if state is invalid and ODE needs to stop
      */
-    inline virtual bool _step()
+    virtual bool _step()
     {
         bool valid = this->_dynamics.set_state(this->_state, this->_time, this->_state_rate);
         for(unsigned i = 0; i < NSTATES; i++) 
@@ -138,17 +138,17 @@ public:
 
     virtual ~Fixed_Size_ODE(){}
 
-    inline void set_time(const double& time) 
+    void set_time(const double& time) 
     {
         this->_time = time;
     }
 
-    inline double get_time() const
+    double get_time() const
     {
         return this->_time;
     }
 
-    inline void set_timestep(const double& time_step) 
+    void set_timestep(const double& time_step) 
     {
         if(time_step == 0.0)
         {
@@ -157,44 +157,44 @@ public:
         this->_time_step = time_step;
     }
 
-    inline double get_timestep() const
+    double get_timestep() const
     {
         return this->_time_step;
     }
 
-    inline void set_state(const std::array<double, NSTATES>& state)
+    void set_state(const std::array<double, NSTATES>& state)
     {
         this->_state = state;
     }
 
-    inline std::array<double, NSTATES> get_state() const 
+    std::array<double, NSTATES> get_state() const 
     {
         return this->_state;
     }
 
-    inline std::array<double, NSTATES> get_state_rate() const 
+    std::array<double, NSTATES> get_state_rate() const 
     {
         return this->_state_rate;
     }
 
-    inline void set_recording_time(double time_record) 
+    void set_recording_time(double time_record) 
     {
         this->_recording.time_record = time_record;
     }
 
-    inline void set_recording_interval(double recording_interval)
+    void set_recording_interval(double recording_interval)
     {
         this->_recording.recording_interval = recording_interval;
     }
 
-    inline void clear_recording()
+    void clear_recording()
     {
         this->_recording.states.clear();
         this->_recording.state_rates.clear();
         this->_recording.times.clear();
     }
 
-    inline const Fixed_Size_Recording<NSTATES>& get_recording()  const
+    const Fixed_Size_Recording<NSTATES>& get_recording()  const
     {
         return this->_recording;
     }
@@ -204,7 +204,7 @@ public:
      * 
      * @param time time 
      */
-    inline void run_to_time(double time)
+    void run_to_time(double time)
     {
         // reserve space for recording
         unsigned approximate_number_of_records = static_cast<unsigned>(fabs((time - _time) / _recording.recording_interval));
@@ -297,7 +297,7 @@ public:
 template<unsigned NSTATES>
 class Fixed_Size_ODE_Huen : public virtual Fixed_Size_ODE<NSTATES> 
 {
-    inline bool _step() override
+    bool _step() override
     {
         this->_dynamics.set_state(this->_state, this->_time, this->_state_rate);
         std::array<double, NSTATES> initial_state = this->_state;

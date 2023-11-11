@@ -66,7 +66,7 @@ namespace Coordinate
         GeocentricInertial() {}
         GeocentricInertial(const GeocentricInertial& x) :
             vec(x.vec) {}
-        GeocentricInertial(GeocentricInertial&& x) :
+        GeocentricInertial(GeocentricInertial&& x) noexcept :
             vec(std::move(x.vec)) {}
 
         void operator=(const GeocentricInertial& x)
@@ -95,7 +95,7 @@ namespace Coordinate
         ENU() {}
         ENU(const ENU& x) :
             vec(x.vec) {}
-        ENU(ENU&& x) :
+        ENU(ENU&& x) noexcept :
             vec(std::move(x.vec)) {}
 
         void operator=(const ENU& x)
