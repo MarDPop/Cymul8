@@ -7,7 +7,7 @@ add_library(physicsLib STATIC
     Ephemeris.cpp
     Geometry.cpp
     SolarSystem.cpp
-    Time.cpp
+    "EpochTime.cpp"
 )
 
 set_target_properties(physicsLib PROPERTIES

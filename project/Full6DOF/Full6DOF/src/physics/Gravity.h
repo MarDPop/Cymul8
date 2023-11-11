@@ -2,7 +2,7 @@
 
 #include "../../lib/Eigen/Dense"
 
-#include "Time.h"
+#include "EpochTime.h"
 #include "Coordinates.h"
 
 #include <vector>

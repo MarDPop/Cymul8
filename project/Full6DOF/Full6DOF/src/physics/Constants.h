@@ -11,15 +11,15 @@ namespace CONSTANTS
 
     constexpr double PLANCK = 6.62607015e-34; // Joule sec , SI exact by definition
 
-    constexpr double C = 299792458; // meters / sec , SI exact by definition
+    constexpr double C = 299792458.0; // meters / sec , SI exact by definition
     constexpr int C_ = 299792458; 
 
     constexpr double CS_FREQ = 9192631770; // Hertz , SI exact by definition
-    constexpr long CS_FREQ_ = 9192631770L; 
+    constexpr long CS_FREQ_ = static_cast<long>(9192631770L); 
 
     constexpr double FREQ_CANDELA = 540e12; // Hertz, monochromatic radiation of frequency for candela defintion
-    constexpr long FREQ_CANDELA_ = 540'000'000'000'000L;
-    constexpr double LUM_EFFICIENCY_CANDELA = 686; // lumens  / Watt
+    constexpr long FREQ_CANDELA_ = static_cast<long>(540'000'000'000'000L);
+    constexpr double LUM_EFFICIENCY_CANDELA = 686.0; // lumens  / Watt
     constexpr int LUM_EFFICIENCY_CANDELA_ = 686;
 
     // Other Exact Numbers
@@ -34,8 +34,8 @@ namespace CONSTANTS
     constexpr double SQRT2 = 1.4142135623730950488016887242097;
     constexpr double SQRT3 = 1.7320508075688772935274463415059;
 
-    constexpr double C_SQ = 89875517873681764;
-    constexpr long C_SQ_ = 89875517873681764L;
+    constexpr double C_SQ = 89875517873681764.0;
+    constexpr long C_SQ_ = static_cast<long>(89875517873681764L);
 
     // Uncertain Numbers
     constexpr double VACUUM_PERMEABILITY = 1.2566370621219e-6; // 4*pi*1e-7 Newton / Ampere^2

@@ -13,10 +13,10 @@
 // Intent is for this to be a vehicle factory... so you "build" vehicles in 
 // static libraries and theses are just tools to help you build them
 
-template<class Body, class G>
-class Vehicle : public virtual Body
+template<class B, class G>
+class Vehicle : public virtual B
 {
-    static_assert(std::is_base_of<GNC<Body>, G>::value, "G not derived from Guidance");
+    static_assert(std::is_base_of<GNC, G>::value, "G not derived from Guidance");
 
 protected:
 
@@ -32,7 +32,7 @@ public:
 
     virtual unsigned get_num_states() const
     {
-        _state_vector.size() + gnc.get_control().N_CONTROL_STATES; // component states
+        return B::_state_vector.size() + _gnc.get_control().N_CONTROL_STATES; // component states
     }
 
     const G& get_GNC() const
@@ -47,26 +47,26 @@ public:
 
     void operator()(const double* x, const double t, double* dx)
     {
-        set_state(x);
+        B::set_state(x);
 
-        _environment.update(_state.position, _state.velocity, t);
+        _environment.update(B::_state.position, B::_state.velocity, t);
 
-        _gnc.update(x + _state_vector.size(), t, dx + _state_vector.size());
+        _gnc.update(x + B::_state_vector.size(), t, dx + B::_state_vector.size());
 
-        _state.acceleration = _environment.get_frame_acceleration();
+        B::_state.acceleration = _environment.get_frame_acceleration();
 
         this->update_accelerations(t);
 
-        get_state_rate(dx);
+        B::get_state_rate(dx);
     }
 
 };
 
 template<class T, class A, class GNC>
-class Vehicle_3DOF_T : public virtual Vehicle<Body_Point_Mass<double>, GNC>
+class Vehicle_3DOF_T : public virtual Vehicle<Body_Point_Mass, GNC>
 {
-    static_assert(std::is_base_of<Thruster>, T > ::value, "P not derived from Propulsion");
-    static_assert(std::is_base_of<Aerodynamics<Eigen::Vector3d>, A > ::value, "A not derived from Aerodynamics");
+    static_assert(std::is_base_of<Thruster, T>::value, "P not derived from Propulsion");
+    static_assert(std::is_base_of<Aerodynamics<Eigen::Vector3d>, A>::value, "A not derived from Aerodynamics");
 
 protected:
 
@@ -83,16 +83,18 @@ protected:
 
         if (_thruster.is_active())
         {
-            _thruster.update(_environment.get_air(), _environment.get_aero_data(), t);
+            _thruster.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_air(),
+                Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
             force += _orientation.col(0)*_thruster.get_thrust();
         }
 
-        if (_environment.in_air())
+        if (Vehicle<Body_Point_Mass, GNC>::_environment.in_air())
         {
-            force += _aero.update(_environment.get_air(), _environment.get_aero_data(), t);
+            force += _aero.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_air(),
+                Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
         }
           
-        _acceleration += force*(1.0/_state.mass);
+        Body_Point_Mass::_acceleration += force*(1.0/ Body_Point_Mass::_state.mass);
     }
 
 public:
@@ -104,11 +106,11 @@ public:
 };
 
 
-template<class A, class P, MOMENT_CONSTANTS NDEG, class GNC>
-class Vehicle_6DOF_T : public virtual Vehicle< Body_Mass_Dependent_Inertia<NDEG>, GNC>
+template<class A, class P, MOMENT_CONSTANTS NDEG, class G>
+class Vehicle_6DOF_T : public virtual Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>
 {
     static_assert(std::is_base_of<Aerodynamics<BodyAction>, A > ::value, "A not derived from Aerodynamics");
-    static_assert(std::is_base_of<Propulsion>, P > ::value, "P not derived from Propulsion");
+    static_assert(std::is_base_of<Propulsion, P >::value, "P not derived from Propulsion");
 
 protected:
 
@@ -128,34 +130,39 @@ protected:
     */
     MomentOfInertia<NDEG> _moment_of_inertia_delta;
 
-    void update_accelerations(double t) override
+    void update_inertia() override
     {
-        double dm = _state.mass - _inertia_empty.mass;
-        _inertia.center_of_mass = _inertia_empty.center_of_mass + _center_of_mass_delta*dm;
+        double dm = Body_Mass_Dependent_Inertia<NDEG>::_state.mass - _inertia_empty.mass;
+        Body_Mass_Dependent_Inertia<NDEG>::_inertia.center_of_mass = _inertia_empty.center_of_mass + _center_of_mass_delta * dm;
         for (auto i = 0u; i < NDEG; i++)
         {
-            _inertia.moment_of_inertia.I[i] = _inertia_empty.moment_of_inertia.I[i] + _moment_of_inertia_delta.I[i]*dm;
+            Body_Mass_Dependent_Inertia<NDEG>::_inertia.moment_of_inertia.I[i] =
+                _inertia_empty.moment_of_inertia.I[i] + _moment_of_inertia_delta.I[i] * dm;
         }
+    }
 
+    void update_accelerations(double t) override
+    {
         if (_propulsion.get_thruster().is_active())
         {
-            _propulsion.update_thrust(_environment.get_air(), _environment.get_aero_data(), t);
+            _propulsion.update_thrust(Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_air(),
+                Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_aero_data(), t);
         }
 
-        if (_environment.in_air())
+        if (Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.in_air())
         {
-            _aerodynamics.update(_environment.get_air(), _environment.get_aero_data(), t);
+            _aerodynamics.update(Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_air(),
+                Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_aero_data(), t);
         }
 
         BodyAction totalAction = _propulsion.get_action() + _aerodynamics.get_action(); // at zero
 
-        _acceleration += totalAction.force * (1.0 / _state.mass);
+        Body_Mass_Dependent_Inertia<NDEG>::_acceleration += totalAction.force * (1.0 / Body_Mass_Dependent_Inertia<NDEG>::_state.mass);
 
-        _inertia.moment_of_inertia.get_angular_acceleration_body(_state.angular_velocity,
-            totalAction.get_torque(_inertia.center_of_mass),
-            _angular_acceleration);
+        Body_Mass_Dependent_Inertia<NDEG>::get_angualar_acceleration(
+            totalAction.get_torque(Body_Mass_Dependent_Inertia<NDEG>::_inertia.center_of_mass));
         
-        _mass_rate = -_propulsion.get_thruster().get_mass_rate();        
+        Body_Mass_Dependent_Inertia<NDEG>::_mass_rate = -_propulsion.get_thruster().get_mass_rate();
     }
 
 public:
@@ -172,11 +179,11 @@ public:
     }
 };
 
-template<class A, class P, class T, class GNC>
-class Vehicle_6DOF_Full_T : public virtual Vehicle< Body<MOMENT_CONSTANTS::FULL>, GNC>
+template<class A, class P, class T, class G>
+class Vehicle_6DOF_Full_T : public virtual Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>
 {
-    static_assert(std::is_base_of<Aerodynamics<BodyAction>>, A > ::value, "A not derived from Aerodynamics");
-    static_assert(std::is_base_of<Propulsion>, P > ::value, "P not derived from Propulsion");
+    static_assert(std::is_base_of<Aerodynamics<BodyAction>, A>::value, "A not derived from Aerodynamics");
+    static_assert(std::is_base_of<Propulsion, P>::value, "P not derived from Propulsion");
     // could put static assert for NDEG == Tank::get_inertia()::size() instead of assuming full... but the templates are getting ridiculous
 
 protected:
@@ -195,31 +202,33 @@ protected:
     {
         if (_propulsion.get_thruster().is_active())
         {
-            _propulsion.update_thrust(_environment.get_air(), _environment.get_aero_data(), t);
+            _propulsion.update_thrust(Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_air(), 
+                Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_aero_data(), t);
         }
 
-        if (_environment.in_air())
+        if (Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.in_air())
         {
-            _aerodynamics.update(_environment.get_air(), _environment.get_aero_data(), t);
+            _aerodynamics.update(Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_air(), 
+                Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_aero_data(), t);
         }
 
         BodyAction totalAction = _propulsion.get_action() + _aerodynamics.get_action(); // at zero
 
-        _acceleration += totalAction.force * (1.0 / _state.mass);
+        Body<MOMENT_CONSTANTS::FULL>::_acceleration += totalAction.force * (1.0 / Body<MOMENT_CONSTANTS::FULL>::_state.inertia.mass);
 
-        _state.inertia.moment_of_inertia.get_angular_acceleration_body(_state.angular_velocity,
-            totalAction.get_torque(_state.inertia.center_of_mass),
-            _angular_acceleration.data());
+        Body<MOMENT_CONSTANTS::FULL>::get_angualar_acceleration(
+            totalAction.get_torque(Body<MOMENT_CONSTANTS::FULL>::_inertia.center_of_mass));
 
-        _mass_rate = -_propulsion.get_thruster().get_mass_rate();
+        Body<MOMENT_CONSTANTS::FULL>::_mass_rate = -_propulsion.get_thruster().get_mass_rate();
 
-        _tank.update_inertia(_state.mass, t, _acceleration, _inertia_rate);
+        _tank.update_inertia(Body<MOMENT_CONSTANTS::FULL>::_state.inertia.mass, t, 
+            Body<MOMENT_CONSTANTS::FULL>::_acceleration, Body<MOMENT_CONSTANTS::FULL>::_inertia_rate);
     }
 
 };
 
-class Vehicle_3DOF_Standard : public virtual Vehicle<Body_Point_Mass<double>, 
-    GuidanceNavigationControl<Body_Point_Mass<double>>>
+class Vehicle_3DOF_Standard : public virtual Vehicle<Body_Point_Mass, 
+    GuidanceNavigationControl<State_Point>>
 {
 protected:
 
@@ -248,17 +257,17 @@ public:
         _thruster = std::move(__thruster);
     }
 
-    void set_guidance(std::unique_ptr<Guidance<Body_Point_Mass<double>>> __guidance)
+    void set_guidance(std::unique_ptr<Guidance<State_Point>> __guidance)
     {
         _gnc.set_guidance(std::move(__guidance));
     }
 
-    void set_navigation(std::unique_ptr<Navigation<Body_Point_Mass<double>>> __navigation)
+    void set_navigation(std::unique_ptr<Navigation<State_Point>> __navigation)
     {
         _gnc.set_navigation(std::move(__navigation));
     }
 
-    void set_control(std::unique_ptr<Control<Body_Point_Mass<double>>> __control)
+    void set_control(std::unique_ptr<Control<State_Point>> __control)
     {
         _gnc.set_control(std::move(__control));
     }
@@ -266,7 +275,7 @@ public:
 
 class Vehicle_6DOF_Standard : 
     public virtual Vehicle<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>, 
-    GuidanceNavigationControl<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>>>
+    GuidanceNavigationControl<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>>
 {
     // LMAO at that template
 protected:
@@ -305,24 +314,24 @@ public:
         _propulsion = std::move(__propulsion);
     }
 
-    void set_guidance(std::unique_ptr<Guidance<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>>> __guidance)
+    void set_guidance(std::unique_ptr<Guidance<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __guidance)
     {
         _gnc.set_guidance(std::move(__guidance));
     }
 
-    void set_navigation(std::unique_ptr<Navigation<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>>> __navigation)
+    void set_navigation(std::unique_ptr<Navigation<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __navigation)
     {
         _gnc.set_navigation(std::move(__navigation));
     }
 
-    void set_control(std::unique_ptr<Control<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>>> __control)
+    void set_control(std::unique_ptr<Control<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __control)
     {
         _gnc.set_control(std::move(__control));
     }
 
 };
 
-class Vehicle_Components : public virtual Vehicle<Body<MOMENT_CONSTANTS::FULL>, GuidanceNavigationControl<Body<MOMENT_CONSTANTS::FULL>>>
+class Vehicle_Components : public virtual Vehicle<Body<MOMENT_CONSTANTS::FULL>, GuidanceNavigationControl<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>>
 {
 
 protected:
@@ -333,17 +342,17 @@ protected:
 
 public:
 
-    void set_guidance(std::unique_ptr<Guidance<Body<MOMENT_CONSTANTS::FULL>>> __guidance)
+    void set_guidance(std::unique_ptr<Guidance<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __guidance)
     {
         _gnc.set_guidance(std::move(__guidance));
     }
 
-    void set_navigation(std::unique_ptr<Navigation<Body<MOMENT_CONSTANTS::FULL>>> __navigation)
+    void set_navigation(std::unique_ptr<Navigation<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __navigation)
     {
         _gnc.set_navigation(std::move(__navigation));
     }
 
-    void set_control(std::unique_ptr<Control<Body<MOMENT_CONSTANTS::FULL>>> __control)
+    void set_control(std::unique_ptr<Control<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>> __control)
     {
         _gnc.set_control(std::move(__control));
     }

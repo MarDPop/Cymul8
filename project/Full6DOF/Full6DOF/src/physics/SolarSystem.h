@@ -42,7 +42,7 @@ protected:
 
     Eigen::Matrix3d _icrf2fixed; // ECI 2 ECEF
 
-    double _rotation_rate;
+    double _rotation_rate = 0;
 
 public:
 

@@ -64,54 +64,52 @@ public:
     typedef T* iterator;
     typedef const T* const_iterator;
 
-    inline fixed_vector(unsigned n) :
+    fixed_vector(unsigned n) :
         _data(new T[n]),
         _size(n)
     {}
 
-    inline fixed_vector(const fixed_vector& copy) :
+    fixed_vector(const fixed_vector& copy) :
         _data(new T[copy._size]),
         _size(copy._size)
     {
-        memset(_data, copy._data, _size * sizeof(T));
+        memcpy(_data, copy._data, _size * sizeof(T));
     }
 
-    inline fixed_vector(fixed_vector&& copy) :
+    fixed_vector(fixed_vector&& copy) :
         _data(std::move(copy._data)),
         _size(copy._size)
-    {
-        memset(_data, copy._data, _size * sizeof(T));
-    }
+    {    }
 
-    inline ~fixed_vector()
+    ~fixed_vector()
     {
         delete[] _data;
     }
 
-    inline T& operator[](unsigned idx)
+    T& operator[](unsigned idx)
     {
         return _data[idx];
     }
 
-    inline const T& operator[](unsigned idx) const
+    const T& operator[](unsigned idx) const
     {
         return _data[idx];
     }
 
-    inline void operator=(const fixed_vector& copy)
+    void operator=(const fixed_vector& copy)
     {
-        memset(_data, copy._data, _size * sizeof(T));
+        memcpy(_data, copy._data, _size * sizeof(T));
     }
 
-    inline iterator begin() { return _data;}
-    inline const_iterator begin() const { return _data; }
-    inline iterator end() { return _data + _size; }
-    inline const_iterator end() const { return _data + _size; }
+    iterator begin() { return _data;}
+    const_iterator begin() const { return _data; }
+    iterator end() { return _data + _size; }
+    const_iterator end() const { return _data + _size; }
 
-    inline unsigned size() const { return _size; }
+    unsigned size() const { return _size; }
 
-    inline void set(const T* values)
+    void set(const T* values)
     {
-        memset(_data, values, _size * sizeof(T));
+        memcpy(_data, values, _size*sizeof(T));
     }
 };

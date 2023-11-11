@@ -1,6 +1,9 @@
 #pragma once
 
-#include "Time.h"
+#pragma warning(push)
+#pragma warning(disable : 26495)
+
+#include "EpochTime.h"
 
 #include <array>
 #include <vector>
@@ -55,3 +58,4 @@ struct Ephemeris
     static void kepler2position(const double* oe, double* pos);
 
 };
+#pragma warning(pop)

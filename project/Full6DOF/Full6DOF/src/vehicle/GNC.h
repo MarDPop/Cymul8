@@ -3,52 +3,49 @@
 #include "../physics/Body.h"
 #include <memory>
 
-template<class B>
 struct GNC
 {
-    static_assert(std::is_base_of<Body_Base, B>::value, "GNC needs to be a base of Body");
-
-    virtual unsigned get_control_states() = 0;
+    virtual unsigned get_control_states() const = 0;
 
     virtual void update(const double* control_states, const double time, double* dx_control) = 0;
 };
 
-template<class B>
+template<class S>
 class Navigation
 {
 protected:
 
-    B _estimated_state;
+    S _estimated_state;
 
 public:
 
     virtual void update(const double time) {}
 
-    const B& get_estimated_state() const
+    const S& get_estimated_state() const
     {
         return _estimated_state;
     }
 };
 
-template<class B>
+template<class S>
 class Guidance
 {
 protected:
 
-    B _desired_state;
+    S _desired_state;
 
 public:
 
-    virtual void update(const B& estimated,
+    virtual void update(const S& estimated,
         const double time) {}
 
-    const B& get_desired_state() const
+    const S& get_desired_state() const
     {
         return _desired_state;
     }
 };
 
-template<class B>
+template<class S>
 class Control
 {
 
@@ -59,19 +56,19 @@ public:
     Control(unsigned __nControlStates = 0u) :
         N_CONTROL_STATES(__nControlStates) {}
 
-    virtual void update(const B& desired_state,
-        const B& estimated_state,
+    virtual void update(const S& desired_state,
+        const S& estimated_state,
         const double* control_states,
         const double time,
         double* dx_control) {}
 };
 
-template<class B, class G, class N, class C>
-class GuidanceNavigationControl_T : public virtual GNC<B>
+template<class S, class G, class N, class C>
+class GuidanceNavigationControl_T : public virtual GNC
 {
-    static_assert(std::is_base_of<Guidance<B>, G>::value, "G not derived from Guidance");
-    static_assert(std::is_base_of<Navigation<B>, N>::value, "N not derived from Navigation");
-    static_assert(std::is_base_of<Control<B>, C>::value, "C not derived from Control");
+    static_assert(std::is_base_of<Guidance<S>, G>::value, "G not derived from Guidance");
+    static_assert(std::is_base_of<Navigation<S>, N>::value, "N not derived from Navigation");
+    static_assert(std::is_base_of<Control<S>, C>::value, "C not derived from Control");
 
     double _delay = 0;
 
@@ -125,46 +122,46 @@ public:
     }    
 };
 
-template<class B>
-class GuidanceNavigationControl : public virtual GNC<B>
+template<class S>
+class GuidanceNavigationControl : public virtual GNC
 {
 
     double _delay = 0;
 
-    std::unique_ptr<Guidance<B>> _guidance = std::make_unique<Guidance<B>>();
+    std::unique_ptr<Guidance<S>> _guidance = std::make_unique<Guidance<S>>();
 
-    std::unique_ptr<Navigation<B>> _navigation = std::make_unique<Guidance<B>>();
+    std::unique_ptr<Navigation<S>> _navigation = std::make_unique<Guidance<S>>();
 
-    std::unique_ptr<Control<B>> _control = std::make_unique<Guidance<B>>();
+    std::unique_ptr<Control<S>> _control = std::make_unique<Guidance<S>>();
 
 public:
 
-    const Guidance<B>& get_guidance() const
+    const Guidance<S>& get_guidance() const
     {
         *_guidance;
     }
 
-    void set_guidance(std::unique_ptr<Guidance<B>> guidance)
+    void set_guidance(std::unique_ptr<Guidance<S>> guidance)
     {
         _guidance = std::move(guidance);
     }
 
-    const Navigation<B>& get_navigation() const
+    const Navigation<S>& get_navigation() const
     {
         *_navigation;
     }
 
-    void set_navigation(std::unique_ptr<Navigation<B>> navigation)
+    void set_navigation(std::unique_ptr<Navigation<S>> navigation)
     {
         _navigation = std::move(navigation);
     }
 
-    const Control<B>& get_control() const
+    const Control<S>& get_control() const
     {
         *_control;
     }
     
-    void set_control(std::unique_ptr<Control<B>> control)
+    void set_control(std::unique_ptr<Control<S>> control)
     {
         _control = std::move(control);
     }
@@ -174,6 +171,10 @@ public:
         _delay = delay;
     }
 
+    unsigned get_control_states() const override
+    {
+        return _control->N_CONTROL_STATES;
+    }
 
     void update(const double* control_states, const double time, double* dx_control) override
     {
@@ -181,10 +182,10 @@ public:
 
         _navigation->update(time_delay);
 
-        _guidance->update(time_delay,
-            _navigation->get_estimated_state());
+        _guidance->update(_navigation->get_estimated_state(),
+            time_delay);
 
-        _control->update(_navigation.get_estimated_state(),
+        _control->update(_navigation->get_estimated_state(),
             _guidance->get_desired_state(),
             control_states,
             time_delay,

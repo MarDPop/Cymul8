@@ -211,7 +211,7 @@ namespace func
         // this can be further optimized for half values required by legendre
         double res = 1;
         for (int i = 1; i <= k; ++i)
-            res = res * (alpha - (k + i)) / i;
+            res *= (alpha - static_cast<double>(k + i)) / static_cast<double>(i);
         return res;
     }
 

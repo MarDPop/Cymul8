@@ -1,13 +1,13 @@
 #include "SolarSystem.h"
 
 #include <fstream>
-#include "Time.h"
+#include "EpochTime.h"
 #include "../util/StringHelper.h"
 #include "../util/functions.h"
 
 bool file_is_horizons(std::string filename)
 {
-    int idx_ext = filename.size() - 1;
+    int idx_ext = static_cast<int>(filename.size() - 1);
     int idx = 3;
     const char* horizons_ext = ".JPL";
     while (idx > 0)
@@ -113,7 +113,7 @@ void EphemerisHistory::set(double jd2000)
     bool after = jd2000 > _jd2000.back();
     if (before || after)
     {
-        _tidx = _jd2000.size() - after;
+        _tidx = static_cast<unsigned>(_jd2000.size() - after);
     }
     else
     {

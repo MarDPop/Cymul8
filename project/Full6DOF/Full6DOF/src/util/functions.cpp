@@ -285,21 +285,19 @@ namespace func
                 }
             }
         }
-        return (1 << n) * sums;
+        return static_cast<double>(1 << n) * sums;
     }
 
-    double assocLegendrePoly(int l, int m, double x) {
-        int sums = 0;
+    double assocLegendrePoly(int l, int m, double x) 
+    {
+        double sums = 0;
         for (int k = m; k <= l; k++) {
             int prod = k;
             for (int j = m; m < k; m++)
                 prod *= j;
-            sums += prod * pow(x, k - m) * combination(l, k) * generalBinomial((l + k - 1) * 0.5, l);
+            sums += prod*pow(x, k - m)*combination(l, k)*generalBinomial((l + k - 1)*0.5, l);
         }
-        if (m % 2 == 0)
-            return (1 << l) * pow((1 - x * x), m / 2) * sums;
-        else
-            return -1 * (1 << l) * pow((1 - x * x), m * 0.5) * sums;
+        return static_cast<double>((1 - 2*(m % 2))*(1 << l))*pow((1.0 - x*x), static_cast<double>(m >> 1))*sums;
     }
 
     template<typename T>
