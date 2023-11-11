@@ -12,7 +12,7 @@ public:
 
     Aerodynamics()
     {
-        _action.zero();
+        _action.setZero();
     }
 
     virtual void update(const Air& air, const AeroData& aeroData, double t) {}

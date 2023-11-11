@@ -7,7 +7,7 @@ template<class T, typename Float>
 class ode
 {
 
-    static_assert(std::is_arithmetic<T>::value, "Must use a arithmetic type");
+    static_assert(std::is_arithmetic<Float>::value, "Must use a arithmetic type");
 
 public:
 
@@ -19,18 +19,17 @@ public:
         RK23
     };
 
-    class step_options
+    struct step_options
     {
-        friend class ode;
-
         Float min_timestep;
         Float max_timestep;
         Float relative_error;
         Float* const inv_absolute_error;
-
-    public:
         
-        step_options(unsigned N) :
+        step_options(unsigned N) : 
+            min_timestep(1e-6),
+            max_timestep(1.0).
+            relative_error(1e-6),
             inv_absolute_error(new Float[N]) {}
 
         ~step_options()
@@ -118,7 +117,15 @@ public:
         }
     };
 
+    step_options options;
+
 private:
+
+    T& dynamics;
+
+    const unsigned _N;
+
+    const unsigned _state_bytes;
 
     Float* const _state; 
 
@@ -129,10 +136,6 @@ private:
     Float _time; // could be faster if time in state, but probably insignificant for anything but smallest of odes
 
     Float _dt;
-
-    const unsigned _N;
-
-    const unsigned _state_bytes;
 
     static void euler_step(ode& __ode)
     {
@@ -310,15 +313,11 @@ private:
 
 public:
 
-    step_options options;
-
-    T dynamics;
-
-    ode() : 
+    ode(T&) : 
+        _N(dynamics.get_num_states()),
+        _state_bytes(_N*sizeof(Float)),
         _state(new Float[_N]),
         _state_tmp(new Float[_N]),
-        _N(T.get_num_states()),
-        _state_bytes(_N*sizeof(Float)),
         options(_N)
     {}
 
@@ -328,12 +327,12 @@ public:
         delete[] _state_rate;
     }
 
-    inline const double* get_state()
+    const double* get_state()
     {
         return _state;
     }
 
-    inline const double* get_state_rate()
+    const double* get_state_rate()
     {
         return _state_rate;
     }
@@ -341,7 +340,7 @@ public:
     /**
     * @brief run and record
     */
-    inline recording run(run_options& options)
+    recording run(run_options& options)
     {
         // Initialize recording
         recording record(options);

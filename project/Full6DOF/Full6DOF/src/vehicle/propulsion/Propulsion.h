@@ -59,7 +59,7 @@ public:
 
     Propulsion() : _thrust_vector{ 1, 0, 0 }
     {
-        _action.zero();
+        _action.setZero();
     }
 
     void set_thruster(std::unique_ptr<Thruster> __thruster)

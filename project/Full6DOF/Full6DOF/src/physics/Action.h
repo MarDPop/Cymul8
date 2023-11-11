@@ -26,7 +26,7 @@ struct BodyAction
     */
     Eigen::Vector3d location;
 
-    void zero()
+    void setZero()
     {
         this->force.setZero();
         this->moment.setZero();
@@ -76,7 +76,7 @@ struct GeneralAction
     */
     Coordinate::Frame* reference_frame = nullptr;
 
-    void zero()
+    void setZero()
     {
         this->force.setZero();
         this->moment.setZero();

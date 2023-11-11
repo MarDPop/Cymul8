@@ -30,9 +30,13 @@ protected:
 
 public:
 
+    Vehicle() {}
+    virtual ~Vehicle() {}
+
     virtual unsigned get_num_states() const
     {
-        return B::_state_vector.size() + _gnc.get_control().N_CONTROL_STATES; // component states
+        return static_cast<unsigned>(B::_state_vector.size())
+            + _gnc.get_control().N_CONTROL_STATES; // component states
     }
 
     const G& get_GNC() const
@@ -98,6 +102,8 @@ protected:
     }
 
 public:
+
+    Vehicle_3DOF_T() {}
 
     void set_orientation(const Eigen::Matrix3d& __orientation)
     {
@@ -241,6 +247,8 @@ protected:
     void update_accelerations(double t) override;
 
 public:
+
+    Vehicle_3DOF_Standard() {}
 
     void set_orientation(const Eigen::Matrix3d& __orientation)
     {

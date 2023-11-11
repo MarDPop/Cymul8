@@ -12,6 +12,8 @@ add_subdirectory (src/util)
 add_subdirectory (src/vehicle)
 add_subdirectory (test)
 
+target_include_directories(Full6DOF PUBLIC lib/Eigen lib/fpm lib/tinyxml)
+
 target_link_libraries(Full6DOF odeLib physicsLib simulationLib utilsLib vehiclesLib)
 
 target_compile_features(Full6DOF PRIVATE cxx_std_20)

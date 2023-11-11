@@ -79,7 +79,7 @@ public:
     fixed_vector(fixed_vector&& copy) :
         _data(std::move(copy._data)),
         _size(copy._size)
-    {    }
+    {}
 
     ~fixed_vector()
     {

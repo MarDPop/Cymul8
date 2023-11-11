@@ -130,15 +130,15 @@ class GuidanceNavigationControl : public virtual GNC
 
     std::unique_ptr<Guidance<S>> _guidance = std::make_unique<Guidance<S>>();
 
-    std::unique_ptr<Navigation<S>> _navigation = std::make_unique<Guidance<S>>();
+    std::unique_ptr<Navigation<S>> _navigation = std::make_unique<Navigation<S>>();
 
-    std::unique_ptr<Control<S>> _control = std::make_unique<Guidance<S>>();
+    std::unique_ptr<Control<S>> _control = std::make_unique<Control<S>>();
 
 public:
 
     const Guidance<S>& get_guidance() const
     {
-        *_guidance;
+        return *_guidance;
     }
 
     void set_guidance(std::unique_ptr<Guidance<S>> guidance)
@@ -148,7 +148,7 @@ public:
 
     const Navigation<S>& get_navigation() const
     {
-        *_navigation;
+        return *_navigation;
     }
 
     void set_navigation(std::unique_ptr<Navigation<S>> navigation)
@@ -158,7 +158,7 @@ public:
 
     const Control<S>& get_control() const
     {
-        *_control;
+        return *_control;
     }
     
     void set_control(std::unique_ptr<Control<S>> control)

@@ -141,6 +141,9 @@ protected:
 
 public:
 
+    Body_Base() {}
+    virtual ~Body_Base() {}
+
     virtual void get_state_rate(double* dx) = 0;
 
     virtual void set_state(const double* x)
