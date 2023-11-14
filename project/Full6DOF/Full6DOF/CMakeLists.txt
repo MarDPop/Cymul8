@@ -16,6 +16,6 @@ target_include_directories(Full6DOF PUBLIC lib/Eigen lib/fpm lib/tinyxml)
 
 target_link_libraries(Full6DOF odeLib physicsLib simulationLib utilsLib vehiclesLib)
 
-target_compile_features(Full6DOF PRIVATE cxx_std_20)
+set_property(TARGET Full6DOF PROPERTY CXX_STANDARD 20)
 
 # TODO: Add tests and install targets if needed.

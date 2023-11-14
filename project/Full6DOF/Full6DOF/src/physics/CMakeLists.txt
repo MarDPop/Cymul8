@@ -17,7 +17,7 @@ set_target_properties(physicsLib PROPERTIES
 
 target_include_directories(physicsLib PUBLIC .)
 
-target_compile_features(physicsLib PRIVATE cxx_std_20)
+target_compile_features(physicsLib PUBLIC cxx_std_20)
 
 install(TARGETS physicsLib
     LIBRARY DESTINATION lib)
