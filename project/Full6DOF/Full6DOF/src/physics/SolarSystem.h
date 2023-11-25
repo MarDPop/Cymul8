@@ -145,7 +145,7 @@ public:
         id(__id),
         parent(__parent) {}
 
-    void set(double jd2000)
+    void set_ut1_jd2000(double jd2000)
     {
         _ephemeris.set(jd2000);
         _orientation->set(jd2000);
@@ -187,11 +187,11 @@ public:
 
     void remove(int identifier);
 
-    void set(double jd2000)
+    void set_ut1_jd2000(double jd2000)
     {
         for (auto* body : _bodies)
         {
-            body->set(jd2000);
+            body->set_ut1_jd2000(jd2000);
         }
     }
 

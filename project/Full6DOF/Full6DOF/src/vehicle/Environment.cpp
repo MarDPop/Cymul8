@@ -10,3 +10,24 @@ void AeroData::compute(const Air& air,
     double beta = 1.0 + 0.2*mach*mach;
     impact_pressure = air.pressure*(1.0 - beta*beta*beta*sqrt(beta));
 }
+
+
+void Environment::update(const Eigen::Vector3d& position,
+    const Eigen::Vector3d& velocity,
+    double time,
+    bool near_body)
+{
+    _ref.TALO = time;
+
+    _current_planet->set_ut1_jd2000(_ref.jd2000_launch + );
+
+    if (near_body)
+    {
+        _near_body->update(*this);
+        _current_planet->gravity().compute(_near_body->get_coordinates().PCF, time, _frame_acceleration);
+    }
+    else
+    {
+
+    }
+}

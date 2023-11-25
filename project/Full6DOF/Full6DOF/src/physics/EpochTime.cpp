@@ -1,40 +1,82 @@
 #include "EpochTime.h"
 
-EpochTime::EpochTime(UNIX_TIMESTAMP timestamp_ns)
+namespace Time
 {
-    long days = timestamp_ns / JULIAN_DAY_NANOSEC;
-    long day_nanos = timestamp_ns - (days * JULIAN_DAY_NANOSEC);
 
-    int leap_seconds_after_unix = get_UTC_leap_seconds(MJD_UNIX_EPOCH + static_cast<int>(days)); // TODO: see if need to subtract UNIX_TAI
-
-    day_nanos -= leap_seconds_after_unix;
-    if (day_nanos < 0)
+    EpochDate::EpochDate(UNIX_TIMESTAMP timestamp_ns) :
+        _epoch(EPOCH::UNIX)
     {
-        day_nanos += JULIAN_DAY_NANOSEC;
-        days--;
+        long days = timestamp_ns / JULIAN_DAY_NANOSEC;
+        long day_nanos = timestamp_ns - (days * JULIAN_DAY_NANOSEC);
+
+        _day_number = static_cast<int>(days);
+        int leap_seconds_after_unix = get_UTC_leap_seconds(MJD_UNIX_EPOCH + _day_number); // TODO: see if need to subtract UNIX_TAI
+
+        day_nanos -= leap_seconds_after_unix;
+        if (day_nanos < 0)
+        {
+            day_nanos += JULIAN_DAY_NANOSEC;
+            _day_number--;
+        }
+
+        this->_day_fraction = day_nanos * NANOSEC_2_DAY_FRACTION;
     }
 
-    this->_mjdn = days + MJD_UNIX_EPOCH;
-    this->_day_sec = day_nanos * NANOSEC_2_DAY_FRACTION;
-}
-
-int EpochTime::get_UTC_leap_seconds(int mjdn)
-{
-    unsigned _leap_idx = 0;
-    if (mjdn > LEAP_SECOND_MJD.back())
+    EpochDate EpochDate::from_unix_timestamp(UNIX_TIMESTAMP timestamp_ns, EPOCH epoch)
     {
-        return LEAP_SECONDS_UTC.back();
+        EpochDate date;
+
+        return date;
     }
 
-    while (_leap_idx < (LEAP_SECOND_MJD.size() - 1) && mjdn > LEAP_SECOND_MJD[_leap_idx + 1])
+    int LeapSeconds::get_UTC_leap_seconds_MJD(const int mjdn)
     {
-        _leap_idx++;
+        auto idx = LEAP_SECOND_MJD.size();
+        while (--idx > 0)
+        {
+            if (mjdn > LEAP_SECOND_MJD[idx])
+            {
+                break;
+            }
+        }
+        return LEAP_SECONDS_UTC[idx];
     }
 
-    while (_leap_idx > 0 && mjdn < LEAP_SECOND_MJD[_leap_idx])
+    uint8_t LeapSeconds::get_UTC_leap_seconds(const unsigned short unix_day)
     {
-        _leap_idx--;
+        auto idx = LEAP_SECOND_UNIX.size();
+        while (--idx > 0)
+        {
+            if (unix_day > LEAP_SECOND_UNIX[idx])
+            {
+                break;
+            }
+        }
+        return LEAP_SECONDS_UTC[idx];
     }
 
-    return LEAP_SECONDS_UTC[_leap_idx];
+    bool LeapSeconds::is_leap_day_MJD(int mjdn)
+    {
+        auto idx = LEAP_SECOND_MJD.size();
+        while (--idx > 0)
+        {
+            if (mjdn < LEAP_SECOND_MJD[idx])
+            {
+                break;
+            }
+            if (mjdn == LEAP_SECOND_MJD[idx])
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool LeapSeconds::is_leap_day(const unsigned short unix_day)
+    {
+        auto idx = LEAP_SECOND_UNIX.size() - 1;
+        while (unix_day > LEAP_SECOND_UNIX[idx] && --idx > 0){}
+
+        return LEAP_SECOND_UNIX[idx] == unix_day;
+    }
 }

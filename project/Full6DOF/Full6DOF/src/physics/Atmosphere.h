@@ -27,9 +27,10 @@ class Atmosphere
 
 public:
 
+    virtual void set_time(double time) {}
+
     virtual void update(const Coordinate::Geodetic& lla,
-        double time, 
         Air& air, 
-        Eigen::Vector3d& wind) {}
+        Eigen::Vector3d& wind) const {}
 
 };

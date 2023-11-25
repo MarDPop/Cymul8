@@ -2,129 +2,282 @@
 
 #include <vector>
 #include <array>
+#include <string>
 
-typedef long UNIX_TIMESTAMP;
-
-typedef long GPS_TIMESTAMP;
-
-class EpochTime
+namespace Time
 {
-    static constexpr std::array<int, 28> LEAP_SECONDS_UTC = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,26,27};
 
-    // days in which leap second is added at 23:59:60
-    static constexpr std::array<int,28> LEAP_SECOND_MJD = 
+    typedef long UNIX_TIMESTAMP;
+
+    typedef long GPS_TIMESTAMP;
+
+    constexpr long SECONDS2NANOSECONDS = 1'000'000'000L;
+
+    constexpr double JULIAN_DATE_J2000_TT = 2451545.0;
+
+    // January 1, 2000, 11:58:55.816 UTC. = 2451545.0 TT
+    constexpr UNIX_TIMESTAMP J2000_UNIX_NS = 946'727'935'816'000'000L;
+
+    constexpr int TAI_UTC = 10;
+
+    constexpr double TAI_TT = 32.184;
+
+    constexpr long TAI_TT_NS = 32'184'000'000L;
+
+    constexpr int LEAP_SECONDS_UTC_J2000 = 22;
+
+    constexpr int JDN_J2000 = 2451545;
+
+    constexpr int JULIAN_DAY_SEC = 86400;
+
+    constexpr double JULIAN_DAY_SEC_D = 86400.0;
+
+    constexpr long JULIAN_DAY_NANOSEC = static_cast<long>(86400L*SECONDS2NANOSECONDS);
+
+    constexpr double SEC_2_DAY_FRACTION = 1.0 / 86400.0;
+
+    constexpr double NANOSEC_2_DAY_FRACTION = 1.0 / JULIAN_DAY_NANOSEC;
+
+    constexpr double MJD_JULIAN_DATE = 2400000.5;
+
+    constexpr double JULIAN_DATE_UNIX_EPOCH = 2440587.5;
+
+    constexpr int MJD_UNIX_EPOCH = 40587;
+
+    constexpr int MJD_J2000_MIDNIGHT = 51544;
+
+    constexpr int UNIX_TAI_LEAPSECONDS = 10;
+
+    constexpr double HALF_DAY_SEC = 43200.0;
+
+
+    class LeapSeconds
     {
-        40587,
-        41498,
-        41682,
-        42047,
-        42412,
-        42777,
-        43143,
-        43508,
-        43873,
-        44238,
-        44785,
-        45150,
-        45515,
-        46246,
-        47160,
-        47891,
-        48256,
-        48803,
-        49168,
-        49533,
-        50082,
-        50629,
-        51178,
-        53735,
-        54831,
-        56108,
-        57203,
-        57753
+
+    public:
+
+        static constexpr std::array<uint8_t, 28> LEAP_SECONDS_UTC = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,21,22,23,24,25,26,27 };
+
+        // days in which leap second is added at 23:59:60
+        static constexpr std::array<int, 28> LEAP_SECOND_MJD =
+        {
+            40587,
+            41498,
+            41682,
+            42047,
+            42412,
+            42777,
+            43143,
+            43508,
+            43873,
+            44238,
+            44785,
+            45150,
+            45515,
+            46246,
+            47160,
+            47891,
+            48256,
+            48803,
+            49168,
+            49533,
+            50082,
+            50629,
+            51178,
+            53735,
+            54831,
+            56108,
+            57203,
+            57753
+        };
+
+        static constexpr std::array<unsigned short, 28> LEAP_SECOND_UNIX =
+        {
+            0,
+            911,
+            1095,
+            1460,
+            1825,
+            2190,
+            2556,
+            2921,
+            3286,
+            3651,
+            4198,
+            4563,
+            4928,
+            5659,
+            6573,
+            7304,
+            7669,
+            8216,
+            8581,
+            8946,
+            9495,
+            10042,
+            10591,
+            13148,
+            14244,
+            15521,
+            16616,
+            17166
+        };
+
+        static int get_UTC_leap_seconds_MJD(int mjdn);
+
+        static uint8_t get_UTC_leap_seconds(unsigned short unix_day);
+
+        static bool is_leap_day_MJD(int mjdn);
+
+        static bool is_leap_day(unsigned short unix_day);
     };
 
-    double _day_sec; 
-
-    int _mjdn;
-
-public:
-
-    static constexpr long SECONDS2NANOSECONDS = static_cast<long>(1000000000L);
-
-    static constexpr double JULIAN_DATE_J2000 = 2451545.0;
-
-    static constexpr int JDN_J2000 = 2451545;
-
-    static constexpr int JULIAN_DAY_SEC = 86400;
-
-    static constexpr double JULIAN_DAY_SEC_D = 86400.0;
-
-    static constexpr long JULIAN_DAY_NANOSEC = static_cast<long>(86400L*SECONDS2NANOSECONDS);
-
-    static constexpr double SEC_2_DAY_FRACTION = 1.0/86400.0;
-
-    static constexpr double NANOSEC_2_DAY_FRACTION = 1.0/JULIAN_DAY_NANOSEC;
-
-    static constexpr double MJD_JULIAN_DATE = 2400000.5;
-
-    static constexpr double JULIAN_DATE_UNIX_EPOCH = 2440587.5;
-
-    static constexpr int MJD_UNIX_EPOCH = 40587;
-
-    static constexpr int UNIX_TAI_LEAPSECONDS = 10;
-
-    static constexpr double HALF_DAY_SEC = 43200.0;
-
-    EpochTime() : _mjdn(JDN_J2000), _day_sec(HALF_DAY_SEC) {}
-
-    EpochTime(int mjdn, double day_sec) : _mjdn(mjdn), _day_sec(day_sec) {}
-
-    EpochTime(UNIX_TIMESTAMP timestamp_ns);
-
-    int get_MJDN() const
+    enum class EPOCH : int
     {
-        return this->_mjdn;
-    }
+        JULIAN,
+        MODIFIED_JULIAN,
+        J2000_UT1,
+        GPS,
+        UNIX,
+        TAI,
+        TT
+    };
 
-    double get_seconds_past_midnight() const
+    class EpochDate
     {
-        return this->_day_sec;
-    }
+        double _day_fraction;
 
-    void operator+=(double sec)
-    {
-        this->_day_sec += sec;
-        if(this->_day_sec > JULIAN_DAY_SEC_D) 
+        int _day_number;
+
+        EPOCH _epoch;
+
+    public:
+
+        EpochDate() :
+            _day_fraction(0.5),
+            _day_number(JDN_J2000),
+            _epoch(EPOCH::JULIAN) {}
+
+        EpochDate(int dn,
+            double day_fraction,
+            EPOCH epoch = EPOCH::JULIAN) :
+            _day_fraction(day_fraction),
+            _day_number(dn),
+            _epoch(epoch) {}
+
+        EpochDate(UNIX_TIMESTAMP timestamp_ns);
+
+        static EpochDate from_unix_timestamp(UNIX_TIMESTAMP timestamp_ns, EPOCH epoch);
+
+        int get_day_number() const
         {
-            double days = this->_day_sec*SEC_2_DAY_FRACTION;
-            int nDays = static_cast<int>(days);
-
-            this->_mjdn += nDays;
-            this->_day_sec = (days - nDays)*JULIAN_DAY_SEC_D;
+            return this->_day_number;
         }
-    }
 
-    static int get_UTC_leap_seconds(int mjdn); 
+        double get_day_fraction() const
+        {
+            return this->_day_fraction;
+        }
 
-    double to_modified_julian_date() const
+        double get_seconds_past_midnight(double length_of_day = JULIAN_DAY_SEC_D) const
+        {
+            return this->_day_fraction * length_of_day;
+        }
+
+        void operator+=(EpochDate date)
+        {
+            this->_day_fraction += date._day_fraction;
+            this->_day_number += date._day_number;
+            if (this->_day_fraction > 1.0)
+            {
+                this->_day_number++;
+                this->_day_fraction--;
+            }
+        }
+
+        static int get_UTC_leap_seconds(int mjdn);
+
+        double days_past_j2000() const;
+
+        UNIX_TIMESTAMP to_unix_timestamp() const;
+    };
+
+    class TimeTable
     {
-        return this->_mjdn + this->_day_sec * SEC_2_DAY_FRACTION;
-    }
+        // first value at UNIX epoch (Jan 1, 1970 00:00 GMT), 1 per day (first 2.5 years are junk)
 
-    double to_julian_date() const
-    {
-        return static_cast<double>(this->_mjdn) + (this->_day_sec*SEC_2_DAY_FRACTION + MJD_JULIAN_DATE);
-    }
+        std::vector<float> _dut1;
 
-    double days_past_J2000() const
-    {
-        return static_cast<double>(this->_mjdn - JDN_J2000) + (this->_day_sec * SEC_2_DAY_FRACTION - 0.5);
-    }
+        std::vector<float> _LOD;
 
-    static double get_besselian_years(double jd)
+        std::vector<long> _UNIX_midnight;
+
+        TimeTable(const char* filename);
+
+    public:
+
+        static constexpr const char * TABLE_FILENAME = "d";
+
+        static TimeTable& instance()
+        {
+            static TimeTable table(TABLE_FILENAME);
+            return table;
+        }
+
+        double get_dut1(double jd2000) const
+        {
+            unsigned idx = static_cast<unsigned>(jd2000);
+            double delta = jd2000 - static_cast<double>(idx);
+            return _dut1[idx] + (_dut1[idx + 1] - _dut1[idx]) * delta;
+        }
+
+        float get_dut1(unsigned jd2000)
+        {
+            return _dut1[jd2000];
+        }
+
+        float get_LOD(unsigned jd2000)
+        {
+            return _LOD[jd2000];
+        }
+
+        double get_day_fraction_ratio(unsigned jd2000)
+        {
+            return 1.0/(JULIAN_DAY_SEC_D + _LOD[jd2000]);
+        }
+
+        long get_UNIX_midnight(unsigned jd2000)
+        {
+            return _UNIX_midnight[jd2000];
+        }
+    };
+
+
+    inline double get_besselian_years(double jd)
     {
         return 1900.0 + (jd - 2415020.31352) / 365.242198781;
     }
 
-};
+    inline EpochDate unix_timestamp_to_ut1_J2000(UNIX_TIMESTAMP ts)
+    {
+        int days_unix = static_cast<int>(ts / JULIAN_DAY_NANOSEC);
+
+        long leap_nanos = LeapSeconds::get_UTC_leap_seconds(days_unix)*Time::SECONDS2NANOSECONDS;
+
+        long dut1_nanos = static_cast<long>(TimeTable::instance().get_dut1(days_unix)*1e9);
+
+        ts += (dut1_nanos - leap_nanos); // DUT1 should be +0.5 secs on day after leap day
+
+        if (ts < 0)
+        {
+            days_unix--;
+            dut1_nanos = static_cast<long>(TimeTable::instance().get_dut1(days_unix) * 1e9);
+            ts += (JULIAN_DAY_NANOSEC - dut1_nanos);
+        }
+
+        long nanos_past_mid = ts - static_cast<long>(days_unix)*JULIAN_DAY_NANOSEC;
+
+        return EpochDate(days_unix, nanos_past_mid*NANOSEC_2_DAY_FRACTION, EPOCH::J2000_UT1);
+    }
+
+}

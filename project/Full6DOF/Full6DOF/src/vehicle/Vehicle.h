@@ -10,6 +10,17 @@
 #include "propulsion/Propulsion.h"
 #include "component/Component.h"
 
+enum class SIMULATION_STATE
+{
+    NONE = -1,
+    LAUNCH_LANDING = 0,
+    ATMOSPHERIC,
+    LOW_ORBIT,
+    HIGH_ORBIT,
+    INTERPLANETARY,
+    COASTING
+};
+
 // Intent is for this to be a vehicle factory... so you "build" vehicles in 
 // static libraries and theses are just tools to help you build them
 
@@ -47,11 +58,6 @@ public:
     const Environment& get_environment() const
     {
         return _environment;
-    }
-
-    const Environment_NearBody& get_nearbody_environment() const
-    {
-        return _near_body;
     }
 
     void operator()(const double* x, const double t, double* dx)

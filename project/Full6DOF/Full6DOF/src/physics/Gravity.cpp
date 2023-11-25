@@ -4,11 +4,10 @@ Eigen::Vector3d Gravity::fictional_forces_Z_rotation(const Eigen::Vector3d& posi
     const Eigen::Vector3d& velocity,
     const double& rotation)
 {
-    Eigen::Vector3d tmp = rotation*position;
-    tmp[0] -= 2.0 * velocity[1];
-    tmp[1] += 2.0 * velocity[0];
+    double x = -rotation*(rotation*position[0] - 2.0*velocity[1]);
+    double y = -rotation*(rotation*position[1] + 2.0*velocity[0]);
 
-    return -rotation*tmp;
+    return Eigen::Vector3d(x,y,0);
 }
 
 Eigen::Vector3d Gravity::fictional_forces_const_rotation(const Eigen::Vector3d& position,

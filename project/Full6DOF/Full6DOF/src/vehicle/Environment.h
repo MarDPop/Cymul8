@@ -5,16 +5,6 @@
 #include "../physics/SolarSystem.h"
 #include "../physics/Geometry.h"
 
-enum class SIMULATION_STATE
-{
-    NONE = -1,
-    LAUNCH_LANDING = 0,
-    ATMOSPHERIC,
-    LOW_ORBIT,
-    HIGH_ORBIT,
-    INTERPLANETARY,
-    COASTING
-};
 
 struct AeroData
 {
@@ -34,33 +24,70 @@ struct AeroData
 
 struct GroundAndTimeReference
 {
-    EpochTime time;
+    double jd2000_launch;
+
+    long unix_ns_launch;
 
     double TALO;
 
     Coordinate::GeocentricFixed ground;
 
-    void set(EpochTime launch_time,
+    void set(Time::UNIX_TIMESTAMP launch_time,
         Coordinate::Geodetic launch)
     {
-        time = launch_time;
+        jd2000_launch = launch_time.days_past_j2000();
+        unix_ns_launch = launch_time;
         ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
     }
 };
 
+struct PlanetCoordinates
+{
+    Coordinate::GeocentricInertial PCI;
+
+    Coordinate::GeocentricFixed PCF;
+
+    Coordinate::Geodetic LLA;
+
+    Coordinate::ENU ENU;
+
+    Coordinate::Spherical RTP;
+};
+
 class Environment
 {
-protected:
+public:
+
+    class NearBody
+    {
+        PlanetCoordinates _coordinates;
+
+        AeroData _aero_data;
+
+    public:
+
+        void update(const Environment& environment);
+
+        const PlanetCoordinates& get_coordinates() const
+        {
+            return _coordinates;
+        }
+
+        const AeroData& get_aero_data() const
+        {
+            return _aero_data;
+        }
+    };
+
+private:
 
     SolarSystemBody* _current_planet;
 
     GroundAndTimeReference _ref;
 
-    Coordinate::GeocentricInertial _PCI;
-
-    Coordinate::GeocentricFixed _PCF;
-
     Eigen::Vector3d _frame_acceleration; // includes gravity
+
+    std::unique_ptr<NearBody> _near_body = std::make_unique<NearBody>();
 
 public:
 
@@ -79,58 +106,20 @@ public:
         return _ref;
     }
 
-    const Coordinate::GeocentricInertial& get_PCI() const
-    {
-        return _PCI;
-    }
-
-    const Coordinate::GeocentricFixed& get_PCF() const
-    {
-        return _PCF;
-    }
-
-    const Eigen::Vector3d get_frame_acceleration() const
+    const Eigen::Vector3d& get_frame_acceleration() const
     {
         return _frame_acceleration;
     }
 
+    const NearBody& get_near_body() const
+    {
+        return *_near_body;
+    }
+
     void update(const Eigen::Vector3d& position, 
         const Eigen::Vector3d& velocity, 
-        double time);
+        double time,
+        bool near_body = true);
 
 };
 
-class Environment_NearBody 
-{
-    Coordinate::Geodetic _LLA;
-
-    Coordinate::ENU _ENU;
-
-    Coordinate::Spherical _RTP;
-
-    AeroData _aero_data;
-
-public:
-
-    void update(const Environment& environment);
-
-    const Coordinate::Geodetic& get_LLA() const
-    {
-        return _LLA;
-    }
-
-    const Coordinate::ENU& get_ENU() const
-    {
-        return _ENU;
-    }
-
-    const Coordinate::Spherical& get_RTP() const
-    {
-        return _RTP;
-    }
-
-    const AeroData& get_aero_data() const
-    {
-        return _aero_data;
-    }
-};

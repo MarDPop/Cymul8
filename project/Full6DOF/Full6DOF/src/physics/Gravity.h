@@ -17,8 +17,6 @@ class Gravity
 
 public:
 
-    virtual void set_time(EpochTime time) {};
-
     virtual void compute(   const Coordinate::GeocentricFixed& position,
                             const double R,
                             Eigen::Vector3d& acceleration) const = 0;
