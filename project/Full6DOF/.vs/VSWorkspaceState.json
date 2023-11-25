@@ -15,14 +15,14 @@
     "",
     "\\Full6DOF",
     "\\Full6DOF\\src",
-    "\\Full6DOF\\src\\ode\\test",
     "\\Full6DOF\\src\\physics",
+    "\\Full6DOF\\src\\simulation",
     "\\Full6DOF\\src\\util",
     "\\Full6DOF\\src\\vehicle",
     "\\Full6DOF\\src\\vehicle\\aerodynamics",
     "\\Full6DOF\\src\\vehicle\\propulsion",
     "\\Full6DOF\\test"
   ],
-  "SelectedNode": "\\Full6DOF\\src\\vehicle\\propulsion\\Thruster.h",
+  "SelectedNode": "\\Full6DOF\\src\\simulation\\Simulation.h",
   "PreviewInSolutionExplorer": false
 }
