@@ -8,13 +8,13 @@ void Vehicle_3DOF_Standard::update_accelerations(double t)
 
     if (_thruster->is_active())
     {
-        _thruster->update(_environment.get_air(), _environment.get_aero_data(), t);
+        _thruster->update(t);
         force += _orientation.col(0) * _thruster->get_thrust();
     }
 
     if (_environment.in_air())
     {
-        _aerodynamics->update(_environment.get_air(), _environment.get_aero_data(), t);
+        _aerodynamics->update(_environment.get_aero_data(), t);
         force += _aerodynamics->get_action();
     }
 

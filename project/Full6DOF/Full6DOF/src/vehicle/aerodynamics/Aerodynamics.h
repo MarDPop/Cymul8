@@ -6,6 +6,8 @@
 template<class T>
 class Aerodynamics
 {
+protected:
+
     T _action;
 
 public:
@@ -15,7 +17,8 @@ public:
         _action.setZero();
     }
 
-    virtual void update(const Air& air, const AeroData& aeroData, double t) {}
+    virtual void update(const AeroData& aeroData, 
+        double t) {}
 
     const T& get_action() const
     {

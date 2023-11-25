@@ -5,108 +5,88 @@
 #include "../physics/SolarSystem.h"
 #include "../physics/Geometry.h"
 
+enum class SIMULATION_STATE
+{
+    NONE = -1,
+    LAUNCH_LANDING = 0,
+    ATMOSPHERIC,
+    LOW_ORBIT,
+    HIGH_ORBIT,
+    INTERPLANETARY,
+    COASTING
+};
+
 struct AeroData
 {
-    Eigen::Vector3d air_velocity_ecef;
+    Air air;
+    /**
+    * @brief direction of the vehicle against the air in the ecef frame
+    */
+    Eigen::Vector3d air_velocity_ecef_unit;
     double airspeed;
     double mach;
     double dynamic_pressure;
     double impact_pressure;
+
+    void compute(const Air& air, 
+        const Eigen::Vector3d& air_ecef_velocity);
+};
+
+struct GroundAndTimeReference
+{
+    EpochTime time;
+
+    double TALO;
+
+    Coordinate::GeocentricFixed ground;
+
+    void set(EpochTime launch_time,
+        Coordinate::Geodetic launch)
+    {
+        time = launch_time;
+        ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
+    }
 };
 
 class Environment
 {
-public:
-
-    enum class STATE
-    {
-        NONE = -1,
-        LAUNCH_LANDING = 0,
-        ATMOSPHERIC,
-        LOW_ORBIT,
-        HIGH_ORBIT,
-        INTERPLANETARY,
-        COASTING
-    };
-
-private:
+protected:
 
     SolarSystemBody* _current_planet;
 
-    EpochTime _reference_time;
+    GroundAndTimeReference _ref;
 
-    Coordinate::GeocentricFixed _reference_ground;
+    Coordinate::GeocentricInertial _PCI;
 
-    double _TALO;
-
-    Coordinate::GeocentricInertial _ECI;
-
-    Coordinate::GeocentricFixed _ECEF;
-
-    Coordinate::Geodetic _LLA;
-
-    Coordinate::ENU _ENU;
-
-    Coordinate::Spherical _RTP;
+    Coordinate::GeocentricFixed _PCF;
 
     Eigen::Vector3d _frame_acceleration; // includes gravity
 
-    Air _air;
-
-    AeroData _aero_data;
-
-    double _radiation_pressure = 0.0;
-
-    STATE _current_state = STATE::NONE;
-
-    bool _use_aero = true;
-
-    void update_launch_landing( const Eigen::Vector3d& position, 
-                        const Eigen::Vector3d& velocity,
-                        double talo);
-
-    void update_atm(const Eigen::Vector3d& position,
-        const Eigen::Vector3d& velocity,
-        double talo);
-
-    void update_low_orbit(const Eigen::Vector3d& position,
-        const Eigen::Vector3d& velocity,
-        double talo);
-
-    void update_high_orbit(const Eigen::Vector3d& position,
-        const Eigen::Vector3d& velocity,
-        double talo);
-
-    void update_interplanetary(const Eigen::Vector3d& position,
-        const Eigen::Vector3d& velocity,
-        double talo);
-
-    void update_coast(const Eigen::Vector3d& position,
-        const Eigen::Vector3d& velocity,
-        double talo);
-
 public:
-   
-    void set_launch(EpochTime launch_time,
-                    Coordinate::Geodetic launch)
+
+    void set_current_planet(SolarSystemBody* current_planet)
     {
-        _reference_time = launch_time;
-        _reference_ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
+        _current_planet = current_planet;
     }
 
-    void set_radation_pressure(double radiation_pressure)
+    const SolarSystemBody& get_current_planet() const
     {
-        _radiation_pressure = radiation_pressure;
+        return *_current_planet;
     }
 
-    const Air& get_air() const
+    const GroundAndTimeReference& get_references() const
     {
-        return _air;
+        return _ref;
     }
 
-    const AeroData& get_aero_data() const
+    const Coordinate::GeocentricInertial& get_PCI() const
     {
-        return _aero_data;
+        return _PCI;
+    }
+
+    const Coordinate::GeocentricFixed& get_PCF() const
+    {
+        return _PCF;
     }
 
     const Eigen::Vector3d get_frame_acceleration() const
@@ -114,13 +94,43 @@ public:
         return _frame_acceleration;
     }
 
-    bool in_air() const
+    void update(const Eigen::Vector3d& position, 
+        const Eigen::Vector3d& velocity, 
+        double time);
+
+};
+
+class Environment_NearBody 
+{
+    Coordinate::Geodetic _LLA;
+
+    Coordinate::ENU _ENU;
+
+    Coordinate::Spherical _RTP;
+
+    AeroData _aero_data;
+
+public:
+
+    void update(const Environment& environment);
+
+    const Coordinate::Geodetic& get_LLA() const
     {
-        return _use_aero;
+        return _LLA;
     }
 
-    void set_state(STATE state);
+    const Coordinate::ENU& get_ENU() const
+    {
+        return _ENU;
+    }
 
-    void (Environment::*update)(const Eigen::Vector3d&, const Eigen::Vector3d&, double);
+    const Coordinate::Spherical& get_RTP() const
+    {
+        return _RTP;
+    }
 
+    const AeroData& get_aero_data() const
+    {
+        return _aero_data;
+    }
 };

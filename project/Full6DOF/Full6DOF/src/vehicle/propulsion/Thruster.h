@@ -4,6 +4,9 @@
 
 class Thruster
 {
+protected:
+
+    const AeroData* _aero_data = nullptr;
 
     double _thrust = 0;
 
@@ -22,7 +25,12 @@ public:
 
     virtual ~Thruster() {}
 
-    virtual void update(const Air& air, const AeroData& aero_data, double t) {}
+    void set_aero_data(const AeroData* aero_data) 
+    {
+        this->_aero_data = aero_data;
+    }
+
+    virtual void update(double t) {}
 
     virtual void start()
     {

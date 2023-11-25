@@ -1,70 +1,12 @@
 #include "Environment.h"
 
-void Environment::update_launch_landing(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
+void AeroData::compute(const Air& air,
+    const Eigen::Vector3d& air_ecef_velocity)
 {
-    _TALO = talo;
-}
-
-void Environment::update_atm(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
-{
-    _TALO = talo;
-}
-
-void Environment::update_low_orbit(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
-{
-
-}
-
-void Environment::update_high_orbit(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
-{
-
-}
-
-void Environment::update_interplanetary(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
-{
-
-}
-
-void Environment::update_coast(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double talo)
-{
-
-}
-
-
-void Environment::set_state(STATE state)
-{
-    _current_state = state;
-    switch (state)
-    {
-    case STATE::LAUNCH_LANDING:
-        update = &Environment::update_launch_landing;
-        break;
-    case STATE::ATMOSPHERIC:
-        update = &Environment::update_atm;
-        break;
-    case STATE::LOW_ORBIT:
-        update = &Environment::update_low_orbit;
-        break;
-    case STATE::HIGH_ORBIT:
-        update = &Environment::update_high_orbit;
-        break;
-    case STATE::INTERPLANETARY:
-        update = &Environment::update_interplanetary;
-        break;
-    default:
-        update = &Environment::update_coast;
-        break;
-    }
+    airspeed = air_ecef_velocity.norm();
+    air_velocity_ecef_unit = air_ecef_velocity*(1.0/airspeed);
+    mach = airspeed*air.inv_sound_speed;
+    dynamic_pressure = 0.5*air.density*airspeed*airspeed;
+    double beta = 1.0 + 0.2*mach*mach;
+    impact_pressure = air.pressure*(1.0 - beta*beta*beta*sqrt(beta));
 }

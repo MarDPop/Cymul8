@@ -21,7 +21,9 @@ struct Fixed_Size_Dynamics
      * @return true if state is valid
      * @return false if state is invalid and ODE should stop
      */
-    virtual bool set_state(const std::array<double, NSTATES>& x, const double& time, std::array<double, NSTATES>& dx) = 0;
+    virtual bool set_state(const std::array<double, NSTATES>& x,
+        const double& time, 
+        std::array<double, NSTATES>& dx) = 0;
 };
 
 /**
@@ -48,7 +50,10 @@ public:
      * @return true if state is valid
      * @return false if state is invalid and ODE should stop
      */
-    virtual bool set_state(const double* x, const double& time, double* dx) = 0;
+    virtual bool set_state(const double* x, 
+        const double& time, 
+        double* dx) = 0;
 
-    inline Dynamics(unsigned _NSTATES) : NSTATES(_NSTATES) {}
+    Dynamics(unsigned _NSTATES) : 
+        NSTATES(_NSTATES) {}
 };

@@ -29,14 +29,14 @@ public:
         Float min_timestep;
         Float max_timestep;
         Float relative_error;
-        Float* const inv_absolute_error;
+        alignas(32) Float* const inv_absolute_error;
 
         step_options() = delete;
         step_options(unsigned N) :
             min_timestep(1.0e-6),
             max_timestep(1.0),
             relative_error(1e-6),
-            inv_absolute_error(aligned_alloc(32,N*sizeof(Float))) {}
+            inv_absolute_error(new Float[N]) {}
 
         ~step_options()
         {
@@ -330,9 +330,9 @@ public:
 
     ~ode()
     {
-        delete[](_state, std::align_val_t(32));
-        delete[](_state_tmp, std::align_val_t(32));
-        delete[](_state_rate, std::align_val_t(32));
+        delete[] _state;
+        delete[] _state_tmp;
+        delete[] _state_rate;
     }
 
     const double* get_state()
@@ -360,32 +360,32 @@ public:
 
         record.emplace_back(_state, _N);
 
-        delete[] (_state_tmp, std::align_val_t(32));
-        delete[] (_state_rate, std::align_val_t(32));
+        delete[] _state_tmp;
+        delete[] _state_rate;
 
         void (ode::*step)(void) = nullptr;
         switch (options.step)
         {
         case STEP::EULER:
             step = &ode::euler_step;
-            _state_rate = new(std::align_val_t(32)) Float[_N];
+            _state_rate = new Float[_N];
             break;
         case STEP::HUEN:
             step = &ode::huen_step;
-            _state_rate = new(std::align_val_t(32)) Float[_N];
+            _state_rate = new Float[_N];
             break;
         case STEP::RK4:
             step = &ode::rk4_step;
-            _state_rate = new(std::align_val_t(32)) Float[_N*5];
+            _state_rate = new Float[_N*5];
             break;
         case STEP::EULER_HUEN:
             step = &ode::huen_step;
-            _state_rate = new(std::align_val_t(32)) Float[_N*2];
+            _state_rate = new Float[_N*2];
             break;
         case STEP::RK23:
             step = &ode::rk23_step;
-            _state_rate = new(std::align_val_t(32)) Float[_N*4];
-            _state_tmp = new(std::align_val_t(32)) Float[_N*2];
+            _state_rate = new Float[_N*4];
+            _state_tmp = new Float[_N*2];
             // need to initialize K1 for FSAL
             dynamics(_state, _time, _state_rate + 3*_N);
             break;

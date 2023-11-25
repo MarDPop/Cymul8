@@ -8,7 +8,7 @@ add_library(physicsLib STATIC
     Geometry.cpp
     SolarSystem.cpp
     "EpochTime.cpp"
-)
+ "Gravity.cpp")
 
 set_target_properties(physicsLib PROPERTIES
     VERSION ${PROJECT_VERSION}

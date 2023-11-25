@@ -49,6 +49,11 @@ public:
         return _environment;
     }
 
+    const Environment_NearBody& get_nearbody_environment() const
+    {
+        return _near_body;
+    }
+
     void operator()(const double* x, const double t, double* dx)
     {
         B::set_state(x);
@@ -67,7 +72,7 @@ public:
 };
 
 template<class T, class A, class GNC>
-class Vehicle_3DOF_T : public virtual Vehicle<Body_Point_Mass, GNC>
+class Vehicle_3DOF_T final : public virtual Vehicle<Body_Point_Mass, GNC>
 {
     static_assert(std::is_base_of<Thruster, T>::value, "P not derived from Propulsion");
     static_assert(std::is_base_of<Aerodynamics<Eigen::Vector3d>, A>::value, "A not derived from Aerodynamics");
@@ -80,22 +85,20 @@ protected:
 
     A _aero;
 
-    void update_accelerations(double t) override
+    void update_accelerations(double t) final override
     {
         Eigen::Vector3d force;
         force.setZero();
 
         if (_thruster.is_active())
         {
-            _thruster.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_air(),
-                Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
+            _thruster.update(t);
             force += _orientation.col(0)*_thruster.get_thrust();
         }
 
         if (Vehicle<Body_Point_Mass, GNC>::_environment.in_air())
         {
-            force += _aero.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_air(),
-                Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
+            force += _aero.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
         }
           
         Body_Point_Mass::_acceleration += force*(1.0/ Body_Point_Mass::_state.mass);
@@ -113,7 +116,7 @@ public:
 
 
 template<class A, class P, MOMENT_CONSTANTS NDEG, class G>
-class Vehicle_6DOF_T : public virtual Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>
+class Vehicle_6DOF_T final : public virtual Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>
 {
     static_assert(std::is_base_of<Aerodynamics<BodyAction>, A > ::value, "A not derived from Aerodynamics");
     static_assert(std::is_base_of<Propulsion, P >::value, "P not derived from Propulsion");
@@ -136,7 +139,7 @@ protected:
     */
     MomentOfInertia<NDEG> _moment_of_inertia_delta;
 
-    void update_inertia() override
+    void update_inertia() final override
     {
         double dm = Body_Mass_Dependent_Inertia<NDEG>::_state.mass - _inertia_empty.mass;
         Body_Mass_Dependent_Inertia<NDEG>::_inertia.center_of_mass = _inertia_empty.center_of_mass + _center_of_mass_delta * dm;
@@ -147,12 +150,11 @@ protected:
         }
     }
 
-    void update_accelerations(double t) override
+    void update_accelerations(double t) final override
     {
         if (_propulsion.get_thruster().is_active())
         {
-            _propulsion.update_thrust(Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_air(),
-                Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_aero_data(), t);
+            _propulsion.update_thrust(t);
         }
 
         if (Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.in_air())
@@ -186,7 +188,7 @@ public:
 };
 
 template<class A, class P, class T, class G>
-class Vehicle_6DOF_Full_T : public virtual Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>
+class Vehicle_6DOF_Full_T final : public virtual Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>
 {
     static_assert(std::is_base_of<Aerodynamics<BodyAction>, A>::value, "A not derived from Aerodynamics");
     static_assert(std::is_base_of<Propulsion, P>::value, "P not derived from Propulsion");
@@ -204,7 +206,7 @@ protected:
 
     Inertia<MOMENT_CONSTANTS::FULL> _inertia_vehicle;
 
-    void update_accelerations(double t) override
+    void update_accelerations(double t) final override
     {
         if (_propulsion.get_thruster().is_active())
         {
@@ -233,7 +235,7 @@ protected:
 
 };
 
-class Vehicle_3DOF_Standard : public virtual Vehicle<Body_Point_Mass, 
+class Vehicle_3DOF_Standard final : public virtual Vehicle<Body_Point_Mass, 
     GuidanceNavigationControl<State_Point>>
 {
 protected:
@@ -281,7 +283,7 @@ public:
     }
 };
 
-class Vehicle_6DOF_Standard : 
+class Vehicle_6DOF_Standard final : 
     public virtual Vehicle<Body_Mass_Dependent_Inertia<MOMENT_CONSTANTS::FULL>, 
     GuidanceNavigationControl<State_Rigid_Body_<MOMENT_CONSTANTS::FULL>>>
 {
@@ -305,7 +307,7 @@ protected:
     MomentOfInertia<MOMENT_CONSTANTS::FULL> _moment_of_inertia_delta;
 
 
-    void update_accelerations(double t) override;
+    void update_accelerations(double t) final override;
 
 public:
 
@@ -346,7 +348,7 @@ protected:
 
     std::vector<Component> _components;
 
-    void update_accelerations(double t) override;
+    void update_accelerations(double t) final override;
 
 public:
 

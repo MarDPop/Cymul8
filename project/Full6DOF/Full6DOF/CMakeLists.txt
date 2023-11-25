@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_executable (Full6DOF "Full6DOF.cpp" "Full6DOF.h")
+add_executable (Full6DOF "Full6DOF.cpp" "Full6DOF.h" "src/ode/test/test.cpp")
 
 add_subdirectory (src/ode)
 add_subdirectory (src/physics)

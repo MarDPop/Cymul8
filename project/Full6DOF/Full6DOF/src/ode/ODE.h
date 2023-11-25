@@ -133,14 +133,18 @@ protected:
 
 public:
 
-    Fixed_Size_ODE(Fixed_Size_Dynamics<NSTATES>& dynamics, double time_step = 1.0, double time = 0.0) : 
-                     _dynamics(dynamics), _time(time), _time_step(time_step) {}
+    Fixed_Size_ODE(Fixed_Size_Dynamics<NSTATES>& __dynamics, 
+        double __time_step = 1.0, 
+        double __time = 0.0) : 
+            _dynamics(__dynamics), 
+            _time(__time), 
+            _time_step(__time_step) {}
 
     virtual ~Fixed_Size_ODE(){}
 
-    void set_time(const double& time) 
+    void set_time(double __time) 
     {
-        this->_time = time;
+        this->_time = __time;
     }
 
     double get_time() const
@@ -148,13 +152,13 @@ public:
         return this->_time;
     }
 
-    void set_timestep(const double& time_step) 
+    void set_timestep(double __time_step) 
     {
-        if(time_step == 0.0)
+        if(__time_step == 0.0)
         {
             throw std::invalid_argument("Time step cannot be zero!");
         }
-        this->_time_step = time_step;
+        this->_time_step = __time_step;
     }
 
     double get_timestep() const
@@ -285,12 +289,14 @@ protected:
 
 public:
 
-    Fixed_Size_ODE_Variable_Step(Fixed_Size_Dynamics<NSTATES>& dynamics, double time_step = 1.0, double time = 0.0) : 
-                    Fixed_Size_ODE<NSTATES>(dynamics, time_step, time) {}
+    Fixed_Size_ODE_Variable_Step(Fixed_Size_Dynamics<NSTATES>& dynamics,
+        double time_step = 1.0, 
+        double time = 0.0) : 
+            Fixed_Size_ODE<NSTATES>(dynamics, time_step, time) {}
 
-    inline void set_options(const Fixed_Size_ODE_Options_Variable<NSTATES>& options) 
+    void set_options(const Fixed_Size_ODE_Options_Variable<NSTATES>& __options) 
     {
-        this->_options = options;
+        this->_options = __options;
     }
 };
 
@@ -409,7 +415,7 @@ protected:
      * @brief records states and increments time to record
      * 
      */
-    inline void _record()
+    void _record()
     {
         _recording.states.emplace_back(_state);
         _recording.state_rates.emplace_back(_state_rate);
@@ -417,7 +423,7 @@ protected:
         _recording.time_record += _recording.recording_interval;
     }
 
-    inline void _reverse_to_time(double time)
+    void _reverse_to_time(double time)
     {
         double time_step_backwards = time - _time;
         for(unsigned i = 0; i < NSTATES; i++)
@@ -433,7 +439,7 @@ protected:
      * @return true if state is valid
      * @return false if state is invalid and ODE needs to stop
      */
-    inline virtual bool _step()
+    virtual bool _step()
     {
         bool valid = this->_dynamics.set_state(this->_state.begin(), this->_time, this->_state_rate.begin());
         for(unsigned i = 0; i < NSTATES; i++) 
@@ -461,31 +467,31 @@ public:
 
     virtual ~ODE(){}
 
-    inline void set_time(const double& time) 
+    void set_time(const double& time) 
     {
         this->_time = time;
     }
 
-    inline double get_time() const
+    double get_time() const
     {
         return this->_time;
     }
 
-    inline void set_timestep(const double& time_step) 
+    void set_timestep(double __time_step) 
     {
-        if(time_step == 0.0)
+        if(__time_step == 0.0)
         {
             throw std::invalid_argument("Time step cannot be zero!");
         }
-        this->_time_step = time_step;
+        this->_time_step = __time_step;
     }
 
-    inline double get_timestep() const
+    double get_timestep() const
     {
         return this->_time_step;
     }
 
-    inline void set_state(const std::vector<double>& state)
+    void set_state(const std::vector<double>& state)
     {
         if(state.size() < NSTATES)
         {
@@ -494,34 +500,34 @@ public:
         this->_state.set(state.data());
     }
 
-    inline fixed_vector<double> get_state() const 
+    fixed_vector<double> get_state() const 
     {
         return this->_state;
     }
 
-    inline fixed_vector<double> get_state_rate() const 
+    fixed_vector<double> get_state_rate() const 
     {
         return this->_state_rate;
     }
 
-    inline void set_recording_time(double time_record) 
+    void set_recording_time(double time_record) 
     {
         this->_recording.time_record = time_record;
     }
 
-    inline void set_recording_interval(double recording_interval)
+    void set_recording_interval(double recording_interval)
     {
         this->_recording.recording_interval = recording_interval;
     }
 
-    inline void clear_recording()
+    void clear_recording()
     {
         this->_recording.states.clear();
         this->_recording.state_rates.clear();
         this->_recording.times.clear();
     }
 
-    inline const Recording& get_recording()  const
+    const Recording& get_recording()  const
     {
         return this->_recording;
     }
@@ -531,7 +537,7 @@ public:
      * 
      * @param time time 
      */
-    inline void run_to_time(double time)
+    void run_to_time(double time)
     {
         // reserve space for recording
         unsigned approximate_number_of_records = static_cast<unsigned>(fabs((time - _time) / _recording.recording_interval));
@@ -573,13 +579,13 @@ struct ODE_Options_Variable
      * @brief 
      * 
      */
-    double max_time_step;
+    double max_time_step = 1.0;
 
     /**
      * @brief 
      * 
      */
-    double min_time_step; 
+    double min_time_step = 1.0; 
 
     /**
      * @brief 
@@ -591,9 +597,10 @@ struct ODE_Options_Variable
      * @brief 
      * 
      */
-    double relative_error;
+    double relative_error = 1.0;
 
-    ODE_Options_Variable(unsigned NSTATES) : absolute_error(NSTATES) {}
+    ODE_Options_Variable(unsigned NSTATES) : 
+        absolute_error(NSTATES) {}
 };
 
 /**
@@ -612,12 +619,15 @@ protected:
 
 public:
 
-    ODE_Variable_Step(Dynamics& dynamics, double time_step = 1.0, double time = 0.0) : 
-                    ODE(dynamics, time_step, time), _options(dynamics.NSTATES) {}
+    ODE_Variable_Step(Dynamics& dynamics, 
+        double time_step = 1.0, 
+        double time = 0.0) : 
+            ODE(dynamics, time_step, time), 
+            _options(dynamics.NSTATES) {}
 
-    inline void set_options(const ODE_Options_Variable& options) 
+    void set_options(const ODE_Options_Variable& __options) 
     {
-        this->_options = options;
+        this->_options = __options;
     }
 };
 
@@ -627,7 +637,7 @@ class ODE_Huen : public virtual ODE
 
     fixed_vector<double> _initial_state_rate;
 
-    inline bool _step() override
+    bool _step() override
     {
         this->_dynamics.set_state(this->_state.begin(), this->_time, this->_state_rate.begin());
         _initial_state = this->_state;
