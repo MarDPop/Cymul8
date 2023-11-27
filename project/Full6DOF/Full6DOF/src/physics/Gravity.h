@@ -37,7 +37,7 @@ public:
         const Eigen::Vector3d& rotation_rate);
 };
 
-class Gravity_Local : virtual Gravity
+class Gravity_Local final : virtual public Gravity
 {
 
     double _g0;
@@ -58,5 +58,10 @@ public:
     void compute(const Coordinate::GeocentricFixed& position,
         const double R,
         Eigen::Vector3d& acceleration) const override;
+
+};
+
+class Gravity_Kepler final : virtual public Gravity
+{
 
 };

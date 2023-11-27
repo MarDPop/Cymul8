@@ -24,18 +24,21 @@ struct AeroData
 
 struct GroundAndTimeReference
 {
-    double jd2000_launch;
+    double jd2000_utc_launch;
 
     long unix_ns_launch;
 
     double TALO;
+
+    double jd2000_ut1;
 
     Coordinate::GeocentricFixed ground;
 
     void set(Time::UNIX_TIMESTAMP launch_time,
         Coordinate::Geodetic launch)
     {
-        jd2000_launch = launch_time.days_past_j2000();
+        Time::EpochDate jd2000_date = Time::to_epoch_date_j2000(launch_time);
+        jd2000_utc_launch = jd2000_date.get_day_number() + jd2000_date.get_day_fraction();
         unix_ns_launch = launch_time;
         ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
     }
@@ -87,9 +90,9 @@ private:
 
     Eigen::Vector3d _frame_acceleration; // includes gravity
 
-    std::unique_ptr<NearBody> _near_body = std::make_unique<NearBody>();
+    NearBody _near_body;
 
-public:
+public:    
 
     void set_current_planet(SolarSystemBody* current_planet)
     {
@@ -113,7 +116,7 @@ public:
 
     const NearBody& get_near_body() const
     {
-        return *_near_body;
+        return _near_body;
     }
 
     void update(const Eigen::Vector3d& position, 

@@ -19,15 +19,21 @@ void Environment::update(const Eigen::Vector3d& position,
 {
     _ref.TALO = time;
 
-    _current_planet->set_ut1_jd2000(_ref.jd2000_launch + );
+    double jd2000_utc = _ref.jd2000_utc_launch + time*Time::SEC_2_DAY_FRACTION;
 
-    if (near_body)
-    {
-        _near_body->update(*this);
-        _current_planet->gravity().compute(_near_body->get_coordinates().PCF, time, _frame_acceleration);
-    }
-    else
-    {
+    static const Time::TimeTable& timeTable = Time::TimeTable::instance();
 
-    }
+    double dut1 = timeTable.get_dut1(_ref.jd2000_ut1);
+
+    _ref.jd2000_ut1 = _ref.jd2000_utc_launch + (time + dut1) * Time::SEC_2_DAY_FRACTION;
+
+    _current_planet->set_ut1_jd2000(_ref.jd2000_ut1);
+
+    _near_body.update(*this);
+
+    _current_planet->gravity().compute(_near_body.get_coordinates().PCF, 
+        _near_body.get_coordinates().RTP.radius,
+        _frame_acceleration);
+
+    
 }

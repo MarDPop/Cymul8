@@ -3,6 +3,14 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <ctime>
+#include <chrono>
+
+#if __cplusplus >= 202002L
+
+
+#endif
+
 
 namespace Time
 {
@@ -50,6 +58,16 @@ namespace Time
 
     constexpr double HALF_DAY_SEC = 43200.0;
 
+    struct Gregorian
+    {
+        unsigned short milliseconds = 0u;
+        unsigned char year; // after 1950
+        unsigned char month;
+        unsigned char day;
+        unsigned char hour;
+        unsigned char min;
+        unsigned char sec;
+    };
 
     class LeapSeconds
     {
@@ -136,7 +154,7 @@ namespace Time
     {
         JULIAN,
         MODIFIED_JULIAN,
-        J2000_UT1,
+        J2000_UTC,
         GPS,
         UNIX,
         TAI,
@@ -231,6 +249,12 @@ namespace Time
             return _dut1[idx] + (_dut1[idx + 1] - _dut1[idx]) * delta;
         }
 
+        double get_dut1(const EpochDate& jd2000) const
+        {
+            unsigned idx = jd2000.get_day_number();
+            return _dut1[idx] + (_dut1[idx + 1] - _dut1[idx])*jd2000.get_day_fraction();
+        }
+
         float get_dut1(unsigned jd2000)
         {
             return _dut1[jd2000];
@@ -252,32 +276,25 @@ namespace Time
         }
     };
 
-
     inline double get_besselian_years(double jd)
     {
         return 1900.0 + (jd - 2415020.31352) / 365.242198781;
     }
 
-    inline EpochDate unix_timestamp_to_ut1_J2000(UNIX_TIMESTAMP ts)
+    UNIX_TIMESTAMP to_unix_timestamp(Gregorian date);
+
+    inline EpochDate to_epoch_date_j2000(UNIX_TIMESTAMP ts)
     {
         int days_unix = static_cast<int>(ts / JULIAN_DAY_NANOSEC);
+        
+        ts -= LeapSeconds::get_UTC_leap_seconds(days_unix)*Time::SECONDS2NANOSECONDS;
 
-        long leap_nanos = LeapSeconds::get_UTC_leap_seconds(days_unix)*Time::SECONDS2NANOSECONDS;
-
-        long dut1_nanos = static_cast<long>(TimeTable::instance().get_dut1(days_unix)*1e9);
-
-        ts += (dut1_nanos - leap_nanos); // DUT1 should be +0.5 secs on day after leap day
-
-        if (ts < 0)
-        {
-            days_unix--;
-            dut1_nanos = static_cast<long>(TimeTable::instance().get_dut1(days_unix) * 1e9);
-            ts += (JULIAN_DAY_NANOSEC - dut1_nanos);
-        }
+        days_unix += ts < 0;
 
         long nanos_past_mid = ts - static_cast<long>(days_unix)*JULIAN_DAY_NANOSEC;
 
-        return EpochDate(days_unix, nanos_past_mid*NANOSEC_2_DAY_FRACTION, EPOCH::J2000_UT1);
+        return EpochDate(days_unix, nanos_past_mid * NANOSEC_2_DAY_FRACTION, EPOCH::J2000_UTC);
     }
+
 
 }

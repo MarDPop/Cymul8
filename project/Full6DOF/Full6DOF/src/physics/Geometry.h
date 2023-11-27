@@ -45,7 +45,7 @@ public:
     bool inside(const Eigen::Vector3d& point,
         const double R) const override
     {
-        return R > _R;
+        return R < _R;
     }
 
     bool intersects(const Eigen::Vector3d& start,

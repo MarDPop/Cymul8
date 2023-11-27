@@ -79,4 +79,9 @@ namespace Time
 
         return LEAP_SECOND_UNIX[idx] == unix_day;
     }
+
+    UNIX_TIMESTAMP to_unix_timestamp(Gregorian date)
+    {
+
+    }
 }
