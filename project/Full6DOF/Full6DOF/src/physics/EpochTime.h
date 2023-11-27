@@ -61,7 +61,7 @@ namespace Time
     struct Gregorian
     {
         unsigned short milliseconds = 0u;
-        unsigned char year; // after 1950
+        unsigned char year; // after 1900
         unsigned char month;
         unsigned char day;
         unsigned char hour;
@@ -281,20 +281,17 @@ namespace Time
         return 1900.0 + (jd - 2415020.31352) / 365.242198781;
     }
 
+    double getGMST(double julianUT1);
+
+    double getGAST(double julianUT1);
+
     UNIX_TIMESTAMP to_unix_timestamp(Gregorian date);
 
-    inline EpochDate to_epoch_date_j2000(UNIX_TIMESTAMP ts)
-    {
-        int days_unix = static_cast<int>(ts / JULIAN_DAY_NANOSEC);
-        
-        ts -= LeapSeconds::get_UTC_leap_seconds(days_unix)*Time::SECONDS2NANOSECONDS;
+    std::array<int, 3> jdn2ymd(int jdn);
 
-        days_unix += ts < 0;
+    int ymd2jdn(int y, int m, int d);
 
-        long nanos_past_mid = ts - static_cast<long>(days_unix)*JULIAN_DAY_NANOSEC;
-
-        return EpochDate(days_unix, nanos_past_mid * NANOSEC_2_DAY_FRACTION, EPOCH::J2000_UTC);
-    }
+    EpochDate to_epoch_date_j2000(UNIX_TIMESTAMP ts);
 
 
 }

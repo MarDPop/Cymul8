@@ -100,6 +100,8 @@ class SolarSystemBody
 
     std::vector<SolarSystemBody> _orbiting_bodies;
 
+    double _TDB2TT;
+
 public:
 
     enum FRAMENUM
@@ -145,10 +147,10 @@ public:
         id(__id),
         parent(__parent) {}
 
-    void set_ut1_jd2000(double jd2000)
+    void set_barycentric_dynamical_time(double tdb)
     {
-        _ephemeris.set(jd2000);
-        _orientation->set(jd2000);
+        _ephemeris.set(tdb);
+        _orientation->set(tdb + _TDB2TT);
     }
 
     const Gravity& gravity() { return *_gravity; }
@@ -181,17 +183,22 @@ class SolarSystem
 
     std::vector<SolarSystemBody*> _bodies;
 
+    double UTC2TDB;
+
 public:
 
     void add(int identifier);
 
     void remove(int identifier);
 
-    void set_ut1_jd2000(double jd2000)
+    void set_TDB_reference(double jd2000);
+
+    void set_utc_jd2000(double jd2000)
     {
+        double tdb = jd2000 + UTC2TDB; // 
         for (auto* body : _bodies)
         {
-            body->set_ut1_jd2000(jd2000);
+            body->set_barycentric_dynamical_time(tdb);
         }
     }
 

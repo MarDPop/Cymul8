@@ -33,15 +33,6 @@ struct GroundAndTimeReference
     double jd2000_ut1;
 
     Coordinate::GeocentricFixed ground;
-
-    void set(Time::UNIX_TIMESTAMP launch_time,
-        Coordinate::Geodetic launch)
-    {
-        Time::EpochDate jd2000_date = Time::to_epoch_date_j2000(launch_time);
-        jd2000_utc_launch = jd2000_date.get_day_number() + jd2000_date.get_day_fraction();
-        unix_ns_launch = launch_time;
-        ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
-    }
 };
 
 struct PlanetCoordinates
@@ -86,13 +77,25 @@ private:
 
     SolarSystemBody* _current_planet;
 
+    SolarSystem* _solar_system;
+
     GroundAndTimeReference _ref;
 
     Eigen::Vector3d _frame_acceleration; // includes gravity
 
     NearBody _near_body;
 
-public:    
+public:   
+
+    void set_launch(Time::UNIX_TIMESTAMP launch_time,
+        Coordinate::Geodetic launch)
+    {
+        Time::EpochDate jd2000_date = Time::to_epoch_date_j2000(launch_time);
+        _ref.jd2000_utc_launch = jd2000_date.get_day_number() + jd2000_date.get_day_fraction();
+        _ref.unix_ns_launch = launch_time;
+        _ref.TALO = 0;
+        _ref.ground = WGS84::LLA2ECEF(launch); // in future make some function for geodetic to ecef for each planet
+    }
 
     void set_current_planet(SolarSystemBody* current_planet)
     {

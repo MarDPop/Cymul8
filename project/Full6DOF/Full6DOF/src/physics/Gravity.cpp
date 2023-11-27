@@ -35,3 +35,10 @@ void Gravity_Local::compute(const Coordinate::GeocentricFixed& position,
     double ratio = _R0/(_R0 + position.z);
     acceleration[2] = _g0*ratio*ratio;
 }
+
+void Gravity_Kepler::compute(const Coordinate::GeocentricFixed& position,
+    const double R,
+    Eigen::Vector3d& acceleration) const
+{
+    acceleration = position.vec * (-_MU / (R*R*R));
+}

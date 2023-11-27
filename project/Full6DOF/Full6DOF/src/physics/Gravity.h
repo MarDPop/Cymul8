@@ -63,5 +63,15 @@ public:
 
 class Gravity_Kepler final : virtual public Gravity
 {
+    const double _MU;
+
+public:
+
+    Gravity_Kepler(double MU) :
+        _MU(MU) {}
+
+    void compute(const Coordinate::GeocentricFixed& position,
+        const double R,
+        Eigen::Vector3d& acceleration) const override;
 
 };

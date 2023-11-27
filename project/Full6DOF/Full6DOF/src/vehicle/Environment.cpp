@@ -11,7 +11,6 @@ void AeroData::compute(const Air& air,
     impact_pressure = air.pressure*(1.0 - beta*beta*beta*sqrt(beta));
 }
 
-
 void Environment::update(const Eigen::Vector3d& position,
     const Eigen::Vector3d& velocity,
     double time,
@@ -21,13 +20,7 @@ void Environment::update(const Eigen::Vector3d& position,
 
     double jd2000_utc = _ref.jd2000_utc_launch + time*Time::SEC_2_DAY_FRACTION;
 
-    static const Time::TimeTable& timeTable = Time::TimeTable::instance();
-
-    double dut1 = timeTable.get_dut1(_ref.jd2000_ut1);
-
-    _ref.jd2000_ut1 = _ref.jd2000_utc_launch + (time + dut1) * Time::SEC_2_DAY_FRACTION;
-
-    _current_planet->set_ut1_jd2000(_ref.jd2000_ut1);
+    _solar_system->set_utc_jd2000(jd2000_utc);
 
     _near_body.update(*this);
 
