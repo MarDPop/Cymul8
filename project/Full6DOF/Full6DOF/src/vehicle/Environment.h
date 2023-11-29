@@ -77,7 +77,7 @@ private:
 
     SolarSystemBody* _current_planet;
 
-    SolarSystem* _solar_system;
+    Planetary_System* _planetary_system;
 
     GroundAndTimeReference _ref;
 

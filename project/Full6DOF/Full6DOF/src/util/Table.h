@@ -215,12 +215,103 @@ public:
 
 };
 
+template<typename Float, unsigned NCOLS> 
+class BasicTable
+{
+	std::vector<Float> _x;
+
+	std::vector<std::array<Float, NCOLS>> _v;
+
+	std::vector<std::array<Float, NCOLS>> _dv;
+
+public:
+
+	BasicTable() {}
+	~BasicTable() {}
+
+	void clear()
+	{
+		_x.clear();
+		_v.clear();
+		_dv.clear();
+	}
+
+	void add(const Float x, const std::array<Float, NCOLS>& v)
+	{
+		if (_x.empty())
+		{
+			_x.push_back(x);
+			_v.push_back(v);
+			return;
+		}
+
+		std::array<Float, NCOLS> dv;
+
+		if (x > _x.back())
+		{
+
+			Float dx = 1.0 / (x - _x.back());
+			for (auto i = 0u; i < NCOLS; i++)
+			{
+				dv[i] = (v[i] - _v.back()[i])*dx;
+			}
+			_x.push_back(x);
+			_v.push_back(v);
+			_dv.push_back(dv);
+			return;
+		}
+
+		unsigned idx = 0;
+		while (idx < _x.size())
+		{
+			if (x < _x[idx])
+			{
+				break;
+			}
+			idx++;
+		}
+		Float dx1 = 1.0 / (x - _x[idx]);
+		Float dx2 = 1.0 / (_x[idx + 1]  - x);
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			dv[i] = (v[i] - _v[idx][i])*dx1;
+			_dv[idx][i] = (_v[idx+1][i] - v[i])*dx2;
+		}
+
+		_x.insert(_x.begin() + idx, x);
+		_v.insert(_v.begin() + idx, v);
+		_dv.insert(_dv.begin() + idx, dv);
+	}
+
+	void get(const Float x, Float* v) const
+	{
+		unsigned idx;
+		if (_x.size() > 64)
+		{
+			auto it = std::lower_bound(_x.begin(), _x.end(), x);
+			idx = std::distance(it, x.begin());
+		}
+		else
+		{
+			auto it = std::find_if(_x.begin(), _x.end(), (const auto & a, const auto & b)[] { a > b; });
+			idx = std::distance(it, x.begin());
+		}
+		
+		Float dx = x - _x[idx];
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			v[i] = _v[idx] + _dv[idx] * dx;
+		}
+	}
+
+};
+
 template<typename Float>
 class DynamicTable
 {
 public:
 
-	constexpr unsigned NCOEF_CUBIC = 3;
+	static constexpr unsigned NCOEF_CUBIC = 3;
 
 	const unsigned NROWS;
 

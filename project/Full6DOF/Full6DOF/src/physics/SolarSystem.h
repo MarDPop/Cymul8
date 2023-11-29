@@ -5,6 +5,7 @@
 #include "Atmosphere.h"
 #include "Ephemeris.h"
 #include "Geometry.h"
+#include "../util/Table.h"
 #include "../../lib/Eigen/Dense"
 
 class EphemerisHistory
@@ -46,7 +47,7 @@ protected:
 
 public:
 
-    virtual void set(double jd2000) = 0;
+    virtual void set(double jd2000) {};
 
     const Eigen::Matrix3d& get_icrf2fixed() const
     {
@@ -174,7 +175,15 @@ public:
     virtual double get(double R, double T) { return 0.0; }
 };
 
-class SolarSystem
+class Planetary_System
+{
+public:
+    virtual void set_TDB_reference(double jd2000);
+
+    virtual void set_utc_jd2000(double jd2000);
+};
+
+class SolarSystem final : public virtual Planetary_System
 {
 
     SolarSystemBody _sol;
@@ -191,9 +200,9 @@ public:
 
     void remove(int identifier);
 
-    void set_TDB_reference(double jd2000);
+    void set_TDB_reference(double jd2000) override;
 
-    void set_utc_jd2000(double jd2000)
+    void set_utc_jd2000(double jd2000) override
     {
         double tdb = jd2000 + UTC2TDB; // 
         for (auto* body : _bodies)
@@ -202,4 +211,47 @@ public:
         }
     }
 
+};
+
+enum MODEL_FIDELITY
+{
+    LOW,
+    MEDIUM,
+    HIGH
+};
+
+template<class G_EARTH, class G_MOON, class ATM_EARTH >
+class Earth_Moon_Sun final : public virtual Planetary_System
+{
+    static_assert(std::is_base_of<Gravity, G_EARTH>::value, "G not derived from Guidance");
+    static_assert(std::is_base_of<Gravity, G_MOON>::value, "G not derived from Guidance");
+    static_assert(std::is_base_of<Atmosphere, ATM_EARTH>::value, "G not derived from Guidance");
+
+
+    double _JD_reference;
+
+public:
+
+    class Earth
+    {
+
+    public:
+        G_EARTH gravity;
+        ATM_EARTH atmosphere;
+    };
+
+    class Moon
+    {
+        DynamicTable<double> _ECI;
+    public:
+        G_MOON gravity;
+    };
+
+    class Sun
+    {
+        DynamicTable<double> _ECI;
+
+    public:
+        static constexpr double MU = 1.32712440018e11; // km/ kg s3
+    };
 };
