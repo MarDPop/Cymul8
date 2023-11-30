@@ -20,7 +20,7 @@ void Environment::update(const Eigen::Vector3d& position,
 
     double jd2000_utc = _ref.jd2000_utc_launch + time*Time::SEC_2_DAY_FRACTION;
 
-    _solar_system->set_utc_jd2000(jd2000_utc);
+    _planetary_system->set_utc_jd2000(jd2000_utc);
 
     _near_body.update(*this);
 

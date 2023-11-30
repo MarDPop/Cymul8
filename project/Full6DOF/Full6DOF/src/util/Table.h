@@ -7,13 +7,9 @@
 #include <string>
 #include "fast_math.h"
 
-template<typename Float>
-class Table
+namespace Tablulate
 {
-public:
-	const unsigned NCOLS;
-
-	enum INTERPOLATION
+	enum class INTERPOLATION
 	{
 		FLOOR = 0,
 		CEIL,
@@ -22,81 +18,29 @@ public:
 		CUBIC
 	};
 
-	enum EXTRAPOLATION
+	enum class EXTRAPOLATION
 	{
 		HOLD_LAST_VALUE = 0,
 		LINEAR
 	};
+}
+
+class Table
+{
+public:
+	const unsigned NCOLS;
 
 private:
 
 	std::vector<std::string> _column_names;
 
-	std::vector<Float> _x;
+	std::vector<double> _x;
 
-	std::vector<std::vector<Float>> _v;
+	std::vector<std::vector<double>> _v;
 
-	std::vector<Float> interpolate(Float x) const
-	{
-		auto it = std::lower_bound(_x.begin(), _x.end(), x);
-		auto idx = std::distance(_x.begin(), it);
-		std::vector<Float> p1(NCOLS);
-		if (interp > 1)
-		{
-			p1 = _v[idx + interp];
-		}
-		else
-		{
-			auto dx = *(it + 1) - *it;
-			auto delta = x - *it;
-			if (interp == NEAREST)
-			{
-				p1 = _v[idx + (static_cast<Float>(2.0)*delta > dx)];
-			}
-			else
-			{
-				auto delta /= dx;
-				p1 = _v[idx];
-				const auto& p2 = _v[idx + 1];
-				switch (interp)
-				{
-				case LINEAR:
-					for (auto i = 0u; i < NCOLS; i++)
-					{
-						p1[i] += (p2[i] - p1[i])*delta;
-					}
-					break;
-				case CUBIC:
-					const auto& p0 = _v[idx - (idx > 0)];
-					const auto& p3 = _v[idx + 1 + (idx < (_x.size() - 2))];
-					const auto halfx = 0.5*delta;
-					for (auto j = 0u; j < NCOLS; j++)
-					{
-						p1[j] += halfx*(p2[j] - p0[j] +
-							delta*(2.0*p0[j] - 5.0*p1[j] + 4.0*p2[j] - p3[j] + 
-								delta*(3.0*(p1[j] - p2[j]) + p3[j] - p0[j])));
-					}
-					break;
-				}
-				
-			}
-			
-		}
-		return p1;
-	}
+	std::vector<double> interpolate(double x, Tablulate::INTERPOLATION interp) const;
 
-	std::vector<Float> extrapolate(Float x, Float dx) const
-	{
-		unsigned idx = (dx > 0) * (_x.size() - 2);
-		dx /= (_x[idx + 1] - _x[idx]);
-		std::vector<Float> p1 = _v[idx];
-		const auto& p2 = _v[idx + 1];
-		for (auto i = 0u; i < NCOLS; i++)
-		{
-			p1[i] += (p2[i] - p1[i])*dx;
-		}
-		return p1;
-	}
+	std::vector<double> extrapolate(double x, double dx) const;
 
 public:
 
@@ -115,7 +59,7 @@ public:
 		_column_names[idx] = name;
 	}
 
-	void set(unsigned idx, const Float& x, const std::vector<Float>& v)
+	void set(unsigned idx, const double& x, const std::vector<double>& v)
 	{
 		assert(v.size() == NCOLS);
 
@@ -128,7 +72,7 @@ public:
 		_v[idx] = v;
 	}
 
-	void add(const Float& x, const std::vector<Float>& v)
+	void add_back(const double& x, const std::vector<double>& v)
 	{
 		assert(v.size() == NCOLS);
 
@@ -136,28 +80,9 @@ public:
 		_v.push_back(v);
 	}
 
-	std::vector<Float> get(Float x, 
-									INTERPOLATION interp = LINEAR,
-									EXTRAPOLATION extrap = HOLD_LAST_VALUE) const
-	{
-		if (x < _x[0])
-		{
-			if (extrap == HOLD_LAST_VALUE)
-			{
-				return _v[0];
-			}
-			return this->extrapolate(x, x - _x[0]);
-		}
-		if (x > _x.back())
-		{
-			if (extrap == HOLD_LAST_VALUE)
-			{
-				return _v.back();
-			}
-			return this->extrapolate(x, x - _x.back());
-		}
-		return this->interpolate(x);
-	}
+	std::vector<double> get(double x,
+		Tablulate::INTERPOLATION interp = Tablulate::INTERPOLATION::LINEAR,
+		Tablulate::EXTRAPOLATION extrap = Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE) const;
 };
 
 template<typename Float, unsigned NROWS, unsigned NCOLS>
@@ -224,9 +149,40 @@ class BasicTable
 
 	std::vector<std::array<Float, NCOLS>> _dv;
 
+	unsigned (*_get_index)(const std::vector<Float>&, Float);
+
 public:
 
+	static unsigned linear_search(const std::vector<Float>& _x, Float x)
+	{
+		auto it = std::find_if(_x.begin(), _x.end(), (const auto & a, const auto & b)[] { a > b; });
+		idx = std::distance(it, _x.begin());
+	}
+
+	static unsigned bisect_search(const std::vector<Float>& _x, Float x)
+	{
+		auto it = std::lower_bound(_x.begin(), _x.end(), x);
+		return std::distance(it, _x.begin());
+	}
+
 	BasicTable() {}
+	BasicTable(std::vector<Float> x
+		std::vector<std::array<Float, NCOLS>> v) :
+			_x(std::move(x)),
+			_v(std::move(v))
+	{
+		_dv.resize(_x.size());
+		for (auto i = 1u; i < _x.size(); i++)
+		{
+			auto& row = _dv[i - 1];
+			Float dx = _x[i] - _x[i - 1];
+			for (auto j = 0u; j < NCOLS; j++)
+			{
+				row[j] = (_v[i][j] - _v[i - 1][j])/dx;
+			}
+		}
+	}
+
 	~BasicTable() {}
 
 	void clear()
@@ -281,21 +237,20 @@ public:
 		_x.insert(_x.begin() + idx, x);
 		_v.insert(_v.begin() + idx, v);
 		_dv.insert(_dv.begin() + idx, dv);
+
+		if (_x.size() >= 64u)
+		{
+			_get_index = &bisect_search;
+		}
+		else
+		{
+			_get_index = &linear_search;
+		}
 	}
 
 	void get(const Float x, Float* v) const
 	{
-		unsigned idx;
-		if (_x.size() > 64)
-		{
-			auto it = std::lower_bound(_x.begin(), _x.end(), x);
-			idx = std::distance(it, x.begin());
-		}
-		else
-		{
-			auto it = std::find_if(_x.begin(), _x.end(), (const auto & a, const auto & b)[] { a > b; });
-			idx = std::distance(it, x.begin());
-		}
+		unsigned idx = _get_index(_x, x);
 		
 		Float dx = x - _x[idx];
 		for (auto i = 0u; i < NCOLS; i++)

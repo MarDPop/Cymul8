@@ -220,38 +220,66 @@ enum MODEL_FIDELITY
     HIGH
 };
 
-template<class G_EARTH, class G_MOON, class ATM_EARTH >
+template<class G_EARTH, class G_MOON, class ATM_EARTH>
 class Earth_Moon_Sun final : public virtual Planetary_System
 {
     static_assert(std::is_base_of<Gravity, G_EARTH>::value, "G not derived from Guidance");
     static_assert(std::is_base_of<Gravity, G_MOON>::value, "G not derived from Guidance");
     static_assert(std::is_base_of<Atmosphere, ATM_EARTH>::value, "G not derived from Guidance");
 
+public:
+
+    struct Earth
+    {
+        G_EARTH gravity;
+
+        ATM_EARTH atmosphere;
+
+        BasicTable<double, 9> ECI2ECF;
+
+        static constexpr double MU = 3.986004418e5; // km/ kg s3
+    };
+
+    struct Moon
+    {
+        BasicTable<double, 3> pos_ECI;
+
+        BasicTable<double, 9> ECI2LCF;
+
+        G_MOON gravity;
+
+        static constexpr double MU = 4.9048695e3; // km/ kg s3
+    };
+
+    struct Sun
+    {
+        BasicTable<double, 3> pos_ECI;
+
+        static constexpr double MU = 1.32712440018e11; // km/ kg s3
+    };
+
+    void load(const std::string& ephemeris_earth_icrf,
+        const std::string& ephemeris_moon_icrf,
+        const std::string& ephemeris_sun_icrf,
+        const std::string& moon_orientation,
+        const std::string& finals_file);
+
+    void load_eci(const std::string& ephemeris_moon_eci,
+        const std::string& ephemeris_sun_eci,
+        const std::string& finals_file);
+
+    void set(double time);
+
+    void get_gravity()
+
+private:
 
     double _JD_reference;
 
-public:
+    Earth _earth;
 
-    class Earth
-    {
+    Moon _moon;
 
-    public:
-        G_EARTH gravity;
-        ATM_EARTH atmosphere;
-    };
+    Sun _sun;
 
-    class Moon
-    {
-        DynamicTable<double> _ECI;
-    public:
-        G_MOON gravity;
-    };
-
-    class Sun
-    {
-        DynamicTable<double> _ECI;
-
-    public:
-        static constexpr double MU = 1.32712440018e11; // km/ kg s3
-    };
 };
