@@ -1,6 +1,6 @@
 #include "Environment.h"
 
-void AeroData::compute(const Air& air,
+void AeroEnvironment::compute(const Air& air,
     const Eigen::Vector3d& air_ecef_velocity)
 {
     airspeed = air_ecef_velocity.norm();

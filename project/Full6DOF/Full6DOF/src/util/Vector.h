@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <algorithm>
 
 template<typename T>
 class array_wrapper
@@ -113,3 +114,39 @@ public:
         memcpy(_data, values, _size*sizeof(T));
     }
 };
+
+namespace VectorUtil
+{
+
+    template<typename T>
+    void get_ascending_order(const T* data, unsigned* indices, const unsigned N)
+    {
+        for (auto i = 0u; i < N; i++)
+        {
+            indices[i] = i;
+        }
+        std::sort(indices, indices + N, [&](const auto& i, const auto& j) { return data[i] < data[j]; });
+    }
+
+    template<typename T>
+    void permute_data(T* data, const unsigned* indices, const unsigned N)
+    {
+        T* sorted_data = new T[N];
+        for (auto i = 0u; i < N; i++)
+        {
+            sorted_data[i] = data[indices[i]];
+        }
+        memset(data, sorted_data, N * sizeof(T));
+        delete[] sorted_data;
+    }
+
+    template<typename T>
+    std::vector<unsigned> get_ascending_order(const std::vector<T>& data)
+    {
+        std::vector<unsigned> indices(data.size());
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), [&](const auto& i, const auto& j) { return data[i] < data[j]; });
+        return indices;
+    }
+
+}

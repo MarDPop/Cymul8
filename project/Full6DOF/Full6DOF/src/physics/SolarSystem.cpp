@@ -54,7 +54,7 @@ void EphemerisHistory::load(std::string filename)
                     break;
                 }
                 auto data = strings::split(line, ',');
-                auto jd2000 = std::stod(data[0]) - EpochTime::JULIAN_DATE_J2000;
+                auto jd2000 = std::stod(data[0]) - Time::JDN_J2000;
                 _jd2000.push_back(jd2000);
 
                 std::array<double, 6> e;

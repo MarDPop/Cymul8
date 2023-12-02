@@ -1,5 +1,8 @@
 #include "Table.h"
 
+#include "Vector.h"
+#include <assert.h>
+
 std::vector<double> Table::interpolate(double x, Tablulate::INTERPOLATION interp) const
 {
 	auto it = std::lower_bound(_x.begin(), _x.end(), x);
@@ -83,4 +86,27 @@ std::vector<double> Table::get(double x,
 		return this->extrapolate(x, x - _x.back());
 	}
 	return this->interpolate(x, interp);
+}
+
+XYTable::XYTable(std::vector<double> x,
+	std::vector<double> y) :
+	_x(std::move(x))
+{
+	assert(_x.size() == y.size());
+
+	_entries.resize(_x.size());
+
+	if (!std::is_sorted(_x.begin(), _x.end()))
+	{
+		auto idx = VectorUtil::get_ascending_order(_x);
+		VectorUtil::permute_data(_x.data(), idx.data(), _x.size());
+		VectorUtil::permute_data(y.data(), idx.data(), _x.size());
+	}
+	
+	for (auto i = 0u; i < (_x.size() - 1); i++)
+	{
+		_entries[i][0] = y[i];
+		_entries[i][1] = (y[i+1] - y[i]) /( _x[i + 1] - _x[i]);
+	}
+	_entries.back()[0] = y.back();
 }

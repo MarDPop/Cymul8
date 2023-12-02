@@ -85,6 +85,31 @@ public:
 		Tablulate::EXTRAPOLATION extrap = Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE) const;
 };
 
+class XYTable
+{
+	std::vector<double> _x;
+
+	std::vector<std::array<double,2>> _entries;
+
+public:
+
+	XYTable(std::vector<double> x,
+		std::vector<double> y);
+
+	void operator=(const XYTable& table)
+	{
+		_x = table._x;
+		_entries = table._entries;
+	}
+
+	double get(double x) const
+	{
+		auto it = std::lower_bound(_x.begin(),_x.end(), x);
+		const auto& entry = _entries[it - _x.begin()];
+		return entry[0] + (x - *it) * entry[1];
+	}
+};
+
 template<typename Float, unsigned NROWS, unsigned NCOLS>
 class LinearTable
 {

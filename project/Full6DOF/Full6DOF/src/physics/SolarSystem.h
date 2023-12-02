@@ -24,6 +24,8 @@ class EphemerisHistory
 
 public:
 
+    EphemerisHistory() {}
+
     void load(std::string file);
 
     void set(double jd2000);
@@ -171,28 +173,28 @@ public:
     const std::vector<SolarSystemBody>& bodies() { return _orbiting_bodies; }
 };
 
-class Planetary_System
+class Sol : public virtual SolarSystemBody
 {
-protected:
-
-    Time::EpochDate _epoch_reference;
-
 public:
-    virtual void set_TDB_reference(Time::EpochDate tdb_date);
 
-    virtual void set_utc_jd2000(double jd2000);
+    Sol() : SolarSystemBody(
+        std::make_unique<Gravity>(nullptr),
+        std::make_unique<Atmosphere>(nullptr),
+        std::make_unique<Geometry>(nullptr),
+        std::make_unique<OrientationHistory>(nullptr), 
+        )
+    {}
 
-    virtual void get_gravitational_acceleration(double* vec) const;
 };
 
-class SolarSystem final : public virtual Planetary_System
+class SolarSystem
 {
 
-    SolarSystemBody _sol;
+    Sol _sol;
 
     std::vector<SolarSystemBody*> _bodies;
 
-    double UTC2TDB;
+    double _jd_tdb;
 
 public:
 
@@ -200,86 +202,17 @@ public:
 
     void remove(int identifier);
 
-    void set_TDB_reference(Time::EpochDate tdb_date) override;
-
-    void set_utc_jd2000(double jd2000) override
+    void set_jd_tdb(double jd2000)
     {
-        double tdb = jd2000 + UTC2TDB; // 
+        _jd_tdb = jd2000;
+        _sol.set_barycentric_dynamical_time(_jd_tdb);
         for (auto* body : _bodies)
         {
-            body->set_barycentric_dynamical_time(tdb);
+            body->set_barycentric_dynamical_time(_jd_tdb);
         }
     }
 
-};
-
-enum MODEL_FIDELITY
-{
-    LOW,
-    MEDIUM,
-    HIGH
-};
-
-template<class G_EARTH, class G_MOON, class ATM_EARTH>
-class Earth_Moon_Sun final : public virtual Planetary_System
-{
-    static_assert(std::is_base_of<Gravity, G_EARTH>::value, "G not derived from Guidance");
-    static_assert(std::is_base_of<Gravity, G_MOON>::value, "G not derived from Guidance");
-    static_assert(std::is_base_of<Atmosphere, ATM_EARTH>::value, "G not derived from Guidance");
-
-public:
-
-    struct Earth
-    {
-        G_EARTH gravity;
-
-        ATM_EARTH atmosphere;
-
-        BasicTable<double, 9> ECI2ECF;
-
-        static constexpr double MU = 3.986004418e5; // km/ kg s3
-    };
-
-    struct Moon
-    {
-        BasicTable<double, 3> pos_ECI;
-
-        BasicTable<double, 9> ECI2LCF;
-
-        G_MOON gravity;
-
-        static constexpr double MU = 4.9048695e3; // km/ kg s3
-    };
-
-    struct Sun
-    {
-        BasicTable<double, 3> pos_ECI;
-
-        static constexpr double MU = 1.32712440018e11; // km/ kg s3
-    };
-
-    void load(const std::string& ephemeris_earth_icrf,
-        const std::string& ephemeris_moon_icrf,
-        const std::string& ephemeris_sun_icrf,
-        const std::string& moon_orientation,
-        const std::string& finals_file);
-
-    void load_eci(const std::string& ephemeris_moon_eci,
-        const std::string& ephemeris_sun_eci,
-        const std::string& finals_file);
-
-    void set(double time);
-
-    void get_gravity()
-
-private:
-
-    double _JD_reference;
-
-    Earth _earth;
-
-    Moon _moon;
-
-    Sun _sun;
+    
 
 };
+
