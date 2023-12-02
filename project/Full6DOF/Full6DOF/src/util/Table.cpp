@@ -1,0 +1,86 @@
+#include "Table.h"
+
+std::vector<double> Table::interpolate(double x, Tablulate::INTERPOLATION interp) const
+{
+	auto it = std::lower_bound(_x.begin(), _x.end(), x);
+	auto idx = std::distance(_x.begin(), it);
+	std::vector<double> p1(NCOLS);
+	if (static_cast<int>(interp) > 1)
+	{
+		p1 = _v[idx + static_cast<int>(interp)];
+	}
+	else
+	{
+		auto dx = *(it + 1) - *it;
+		auto delta = x - *it;
+		if (interp == Tablulate::INTERPOLATION::NEAREST)
+		{
+			p1 = _v[idx + (static_cast<double>(2.0) * delta > dx)];
+		}
+		else
+		{
+			delta /= dx;
+			p1 = _v[idx];
+			const auto& p2 = _v[idx + 1];
+			switch (interp)
+			{
+			case Tablulate::INTERPOLATION::LINEAR:
+				for (auto i = 0u; i < NCOLS; i++)
+				{
+					p1[i] += (p2[i] - p1[i]) * delta;
+				}
+				break;
+			case Tablulate::INTERPOLATION::CUBIC:
+				const auto& p0 = _v[idx - (idx > 0)];
+				const auto& p3 = _v[idx + 1 + (idx < (_x.size() - 2))];
+				const auto halfx = 0.5 * delta;
+				for (auto j = 0u; j < NCOLS; j++)
+				{
+					p1[j] += halfx * (p2[j] - p0[j] +
+						delta * (2.0 * p0[j] - 5.0 * p1[j] + 4.0 * p2[j] - p3[j] +
+							delta * (3.0 * (p1[j] - p2[j]) + p3[j] - p0[j])));
+				}
+				break;
+			}
+
+		}
+
+	}
+	return p1;
+}
+
+std::vector<double> Table::extrapolate(double x, double dx) const
+{
+	unsigned idx = (dx > 0) * (_x.size() - 2);
+	dx /= (_x[idx + 1] - _x[idx]);
+	std::vector<double> p1 = _v[idx];
+	const auto& p2 = _v[idx + 1];
+	for (auto i = 0u; i < NCOLS; i++)
+	{
+		p1[i] += (p2[i] - p1[i]) * dx;
+	}
+	return p1;
+}
+
+std::vector<double> Table::get(double x,
+	Tablulate::INTERPOLATION interp = Tablulate::INTERPOLATION::LINEAR,
+	Tablulate::EXTRAPOLATION extrap = Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE) const
+{
+	if (x < _x[0])
+	{
+		if (extrap == Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE)
+		{
+			return _v[0];
+		}
+		return this->extrapolate(x, x - _x[0]);
+	}
+	if (x > _x.back())
+	{
+		if (extrap == Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE)
+		{
+			return _v.back();
+		}
+		return this->extrapolate(x, x - _x.back());
+	}
+	return this->interpolate(x, interp);
+}

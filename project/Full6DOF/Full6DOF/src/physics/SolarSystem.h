@@ -85,6 +85,10 @@ public:
 class OrientationHistory_IERS
 {
 
+    Eigen::Matrix3d W;
+
+public:
+
 };
 
 class SolarSystemBody
@@ -167,28 +171,24 @@ public:
     const std::vector<SolarSystemBody>& bodies() { return _orbiting_bodies; }
 };
 
-class RadiationPressure
-{
-
-public:
-
-    virtual double get(double R, double T) { return 0.0; }
-};
-
 class Planetary_System
 {
+protected:
+
+    Time::EpochDate _epoch_reference;
+
 public:
-    virtual void set_TDB_reference(double jd2000);
+    virtual void set_TDB_reference(Time::EpochDate tdb_date);
 
     virtual void set_utc_jd2000(double jd2000);
+
+    virtual void get_gravitational_acceleration(double* vec) const;
 };
 
 class SolarSystem final : public virtual Planetary_System
 {
 
     SolarSystemBody _sol;
-
-    std::unique_ptr<RadiationPressure> _radiation_pressure;
 
     std::vector<SolarSystemBody*> _bodies;
 
@@ -200,7 +200,7 @@ public:
 
     void remove(int identifier);
 
-    void set_TDB_reference(double jd2000) override;
+    void set_TDB_reference(Time::EpochDate tdb_date) override;
 
     void set_utc_jd2000(double jd2000) override
     {

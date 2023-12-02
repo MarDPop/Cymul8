@@ -22,8 +22,6 @@ void Environment::update(const Eigen::Vector3d& position,
 
     _planetary_system->set_utc_jd2000(jd2000_utc);
 
-    _near_body.update(*this);
-
     _current_planet->gravity().compute(_near_body.get_coordinates().PCF, 
         _near_body.get_coordinates().RTP.radius,
         _frame_acceleration);

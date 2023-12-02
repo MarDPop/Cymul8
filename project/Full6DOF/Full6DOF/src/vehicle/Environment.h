@@ -48,42 +48,39 @@ struct PlanetCoordinates
     Coordinate::Spherical RTP;
 };
 
-class Environment
+struct Environment
 {
+    Eigen::Vector3d frame_acceleration; // includes gravity
+
+    AeroData aero_data;
+};
+
+class LocalFrame
+{
+    SolarSystemBody* _current_planet;
+
+    Coordinate::GeocentricFixed _ref;
+
+    long _unix_time;
+
+    PlanetCoordinates _coordinates;
+
 public:
 
-    class NearBody
-    {
-        PlanetCoordinates _coordinates;
+    void update(double* pos_vel, double talo,
+        Environment& environment);
 
-        AeroData _aero_data;
+};
 
-    public:
 
-        void update(const Environment& environment);
-
-        const PlanetCoordinates& get_coordinates() const
-        {
-            return _coordinates;
-        }
-
-        const AeroData& get_aero_data() const
-        {
-            return _aero_data;
-        }
-    };
-
+class System
+{
 private:
-
-    SolarSystemBody* _current_planet;
 
     Planetary_System* _planetary_system;
 
-    GroundAndTimeReference _ref;
+    SolarSystemBody* _current_planet;
 
-    Eigen::Vector3d _frame_acceleration; // includes gravity
-
-    NearBody _near_body;
 
 public:   
 
@@ -115,11 +112,6 @@ public:
     const Eigen::Vector3d& get_frame_acceleration() const
     {
         return _frame_acceleration;
-    }
-
-    const NearBody& get_near_body() const
-    {
-        return _near_body;
     }
 
     void update(const Eigen::Vector3d& position, 

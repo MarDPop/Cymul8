@@ -13,6 +13,17 @@ class SimulationConfiguration
     double DISTANCE_NOT_LOCAL = 30;//km
 };
 
+enum class SIMULATION_STATE
+{
+    NONE = -1,
+    LAUNCH_LANDING = 0,
+    ATMOSPHERIC,
+    LOW_ORBIT,
+    HIGH_ORBIT,
+    INTERPLANETARY,
+    COASTING
+};
+
 template<class V>
 class Simulation
 {
@@ -28,5 +39,7 @@ public:
 
     Simulation(const tinyxml2::XMLDocument& config);
     virtual ~Simulation() {}
+
+
 
 };

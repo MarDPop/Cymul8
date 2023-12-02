@@ -4,22 +4,12 @@
 #include "Environment.h"
 #include "../physics/Body.h"
 #include "../physics/Action.h"
+#include "../simulation/Simulation.h"
 
 #include "aerodynamics/Aerodynamics.h"
 #include "propulsion/Thruster.h"
 #include "propulsion/Propulsion.h"
 #include "component/Component.h"
-
-enum class SIMULATION_STATE
-{
-    NONE = -1,
-    LAUNCH_LANDING = 0,
-    ATMOSPHERIC,
-    LOW_ORBIT,
-    HIGH_ORBIT,
-    INTERPLANETARY,
-    COASTING
-};
 
 // Intent is for this to be a vehicle factory... so you "build" vehicles in 
 // static libraries and theses are just tools to help you build them
@@ -37,12 +27,19 @@ protected:
 
     Environment _environment;
 
+    Simulation* _sim;
+
     virtual void update_accelerations(double t) = 0;
 
 public:
 
     Vehicle() {}
     virtual ~Vehicle() {}
+
+    void set_simulation(Simulation* sim)
+    {
+        _sim = sim;
+    }
 
     virtual unsigned get_num_states() const
     {

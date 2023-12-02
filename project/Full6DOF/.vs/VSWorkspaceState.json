@@ -23,6 +23,6 @@
     "\\Full6DOF\\src\\vehicle\\propulsion",
     "\\Full6DOF\\test"
   ],
-  "SelectedNode": "\\Full6DOF\\src\\physics\\EpochTime.h",
+  "SelectedNode": "\\Full6DOF\\src\\vehicle\\Environment.cpp",
   "PreviewInSolutionExplorer": false
 }
