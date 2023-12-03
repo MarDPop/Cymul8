@@ -26,6 +26,10 @@ protected:
 
     Environment _environment;
 
+    PlanetaryFrame _planetary_frame;
+
+    ICRFFrame _icrf_frame;
+
     virtual void update_accelerations(double t) = 0;
 
 public:
@@ -49,11 +53,16 @@ public:
         return _environment;
     }
 
+    void update_environment()
+    {
+
+    }
+
     void operator()(const double* x, const double t, double* dx)
     {
         B::set_state(x);
 
-        _environment.update(B::_state.position, B::_state.velocity, t);
+        this->update_environment();
 
         _gnc.update(x + B::_state_vector.size(), t, dx + B::_state_vector.size());
 

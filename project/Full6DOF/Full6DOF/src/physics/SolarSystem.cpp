@@ -22,7 +22,7 @@ bool file_is_horizons(std::string filename)
     return true;
 }
 
-void EphemerisHistory::load(std::string filename)
+void EphemerisHistory_KeplerElements::load(const std::string& filename)
 {
     std::ifstream file(filename);
     if (file.is_open())
@@ -107,7 +107,7 @@ void EphemerisHistory::load(std::string filename)
     }
 }
 
-void EphemerisHistory::set(double jd2000)
+void EphemerisHistory_KeplerElements::set(double jd2000)
 {
     bool before = jd2000 < _jd2000[0];
     bool after = jd2000 > _jd2000.back();
@@ -146,4 +146,17 @@ void OrientationHistory_Constant::set(double jd2000)
     const double angle = _rotation_rate*(jd2000 - _jd2000_ref);
     
     _icrf2fixed = Eigen::AngleAxisd(angle, _axis_ref.row(2));
+}
+
+void Barycenter::set_barycentric_dynamical_time(double tdb)
+{
+    _ephemeris->set(tdb);
+    for (auto& body : _bodies)
+    {
+        body.set_barycentric_dynamical_time(tdb);
+    }
+    for (auto& barycenter : _barycenters)
+    {
+        barycenter.set_barycentric_dynamical_time(tdb);
+    }
 }

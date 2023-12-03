@@ -254,4 +254,35 @@ namespace func
     template<typename T>
     void weightedPolyFit(const T x[], const T y[], const T w[], const uint_fast16_t& n, const uint_fast16_t& deg, T* coef);
 
+    void XYZRotation(double angleX, double angleY, double angleZ, double* mat)
+    {
+        double cX = cos(angleX);
+        double cY = cos(angleY);
+        double cZ = cos(angleZ);
+        double sX = sin(angleX);
+        double sY = sin(angleY);
+        double sZ = sin(angleZ);
+
+
+    }
+
+    void ZYXRotation(double angleX, double angleY, double angleZ, double* mat)
+    {
+        double cX = cos(angleX);
+        double cY = cos(angleY);
+        double cZ = cos(angleZ);
+        double sX = sin(angleX);
+        double sY = sin(angleY);
+        double sZ = sin(angleZ);
+        mat[0] = cZ*cY;
+        mat[1] = cZ*sY*sX - sZ*cX;
+        mat[2] = cZ*sY*cX + sZ*sX;
+        mat[3] = sZ*cY;
+        mat[4] = sZ*sY*sX + cZ*cX;
+        mat[5] = sZ*sY*cX - cZ*sX;
+        mat[6] = -sY;
+        mat[7] = cY*sX;
+        mat[8] = cY*cX;
+    }
+
 }

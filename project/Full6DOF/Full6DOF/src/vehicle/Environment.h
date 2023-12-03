@@ -21,9 +21,9 @@ struct GroundAndTimeReference
 
 struct PlanetCoordinates
 {
-    Coordinate::GeocentricInertial PCI;
-
     Coordinate::GeocentricFixed PCF;
+
+    Coordinate::GeocentricFixed PCF_velocity;
 
     Coordinate::Geodetic LLA;
 
@@ -54,6 +54,8 @@ struct ElectroMagneticEnvironment
 
     Eigen::Vector3d electric_field;
 
+    Eigen::Vector3d radiation_pressure;
+
     double charge_density;
 
     double total_radiant_intensity;
@@ -62,41 +64,28 @@ struct ElectroMagneticEnvironment
 
 };
 
-struct Environment
+class PlanetaryFrame
 {
-    Eigen::Vector3d frame_acceleration; // includes gravity
-
-    AeroEnvironment* aero_environment = nullptr;
-
-    ElectroMagneticEnvironment* em_environment = nullptr;
-};
-
-class LocalFrame
-{
-    SolarSystemBody* _current_planet;
-
-    Coordinate::GeocentricFixed _ref;
+    PlanetaryBody* _current_planet;
 
     double _jd;
 
-    double _local_to_TDB;
+    double _local_to_TT;
 
     PlanetCoordinates _coordinates;
 
 public:
 
-    void update(const Coordinate::GeocentricFixed& new_ref,
-        double julianDate);
-
-    void update_coordinates(double* pos_vel,
+    void update(const Eigen::Vector3d& pos,
+        const Eigen::Vector3d& vel,
         double talo);
 
-    void set_current_planet(SolarSystemBody* current_planet)
+    void set_current_planet(PlanetaryBody* current_planet)
     {
         _current_planet = current_planet;
     }
 
-    const SolarSystemBody& get_current_planet() const
+    const PlanetaryBody& get_current_planet() const
     {
         return *_current_planet;
     }
@@ -108,16 +97,67 @@ public:
 
 };
 
-class SystemFrame
+class ICRFFrame
 {
 
-    SolarSystem* _solar_system;
+    SolarSystem* _icrf;
 
-    Eigen::Vector3d _position;
+    Eigen::Vector3d _ICRF_position;
 
-    Eigen::Matrix3d _orientation;
+    Eigen::Matrix3d _ICRF_orientation;
 
 public:
 
+    const Eigen::Vector3d& get_ICRF_position() const
+    {
+        return _ICRF_position;
+    }
+
+    const Eigen::Matrix3d& get_ICRF_orientation() const
+    {
+        return _ICRF_orientation;
+    }
+    
 };
 
+
+class Environment
+{
+    Eigen::Vector3d _frame_acceleration; // includes gravity
+
+    AeroEnvironment* _aero_environment = nullptr;
+
+    ElectroMagneticEnvironment* _em_environment = nullptr;
+
+public:
+
+    const Eigen::Vector3d& get_frame_acceleration() const
+    {
+        return _frame_acceleration;
+    }
+
+    const AeroEnvironment* get_aero() const
+    {
+        return _aero_environment;
+    }
+
+    const ElectroMagneticEnvironment* get_em() const
+    {
+        return _em_environment;
+    }
+
+    void update_as_local_frame(const PlanetaryFrame& localFrame,
+        const Eigen::Vector3d& pos,
+        const Eigen::Vector3d& vel,
+        double time);
+
+    void update_from_planetary_frame(const PlanetaryFrame& planetaryFrame,
+        const Eigen::Vector3d& pos, 
+        const Eigen::Vector3d& vel, 
+        double time);
+
+    void update_icrf_frame(const ICRFFrame& icrfFrame,
+        const Eigen::Vector3d& pos,
+        const Eigen::Vector3d& vel,
+        double time);
+};

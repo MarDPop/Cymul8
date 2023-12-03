@@ -33,7 +33,11 @@ class Simulation
 
     ode<V, double> _ode;
 
-    SolarSystem solar_system;
+    LocalFrame* _local_frame;
+
+    SolarSystem _solar_system;
+
+    SIMULATION_STATE _state;
 
 public:
 

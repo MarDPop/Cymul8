@@ -37,6 +37,9 @@ namespace CONSTANTS
     constexpr double C_SQ = 89875517873681764.0;
     constexpr long C_SQ_ = static_cast<long>(89875517873681764L);
 
+    constexpr long ASTRONOMICAL_UNIT_ = 149597870700L;
+    constexpr double ASTRONOMICAL_UNIT = 149597870700;
+
     // Uncertain Numbers
     constexpr double VACUUM_PERMEABILITY = 1.2566370621219e-6; // 4*pi*1e-7 Newton / Ampere^2
     constexpr double VACUUM_PERMITTIVITY = 8.854187812813e-12; // Farad / meter
