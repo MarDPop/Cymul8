@@ -26,9 +26,13 @@ protected:
 
     Environment _environment;
 
+    FrameReference* _frame_reference;
+
     PlanetaryFrame _planetary_frame;
 
     ICRFFrame _icrf_frame;
+
+    bool _use_planetary_frame = true;
 
     virtual void update_accelerations(double t) = 0;
 
@@ -53,16 +57,42 @@ public:
         return _environment;
     }
 
-    void update_environment()
+    void update_environment(double t)
     {
-
+        if (_use_planetary_frame)
+        {
+            if (_frame_reference)
+            {
+                _planetary_frame.update(_frame_reference,
+                    B::_state.position,
+                    B::_state.velocity,
+                    t);
+            }
+            else
+            {
+                _planetary_frame.update(B::_state.position,
+                    B::_state.velocity,
+                    t);
+            }
+            _environment.update_planetary_frame(_planetary_frame,
+                B::_state.position,
+                B::_state.velocity,
+                t);
+        }
+        else
+        {
+            _environment.update_icrf_frame(_icrf_frame,
+                B::_state.position,
+                B::_state.velocity,
+                t);
+        }
     }
 
     void operator()(const double* x, const double t, double* dx)
     {
         B::set_state(x);
 
-        this->update_environment();
+        this->update_environment(t);
 
         _gnc.update(x + B::_state_vector.size(), t, dx + B::_state_vector.size());
 
@@ -94,15 +124,17 @@ protected:
         Eigen::Vector3d force;
         force.setZero();
 
+        const auto* aero = Vehicle<Body_Point_Mass, GNC>::_environment.get_aero();
+
         if (_thruster.is_active())
         {
-            _thruster.update(t);
+            _thruster.update(aero, t);
             force += _orientation.col(0)*_thruster.get_thrust();
         }
-
-        if (Vehicle<Body_Point_Mass, GNC>::_environment.in_air())
+        
+        if (aero)
         {
-            force += _aero.update(Vehicle<Body_Point_Mass, GNC>::_environment.get_aero_data(), t);
+            force += _aero.update(*aero, t);
         }
           
         Body_Point_Mass::_acceleration += force*(1.0/ Body_Point_Mass::_state.mass);
@@ -156,15 +188,16 @@ protected:
 
     void update_accelerations(double t) final override
     {
+        const auto* aero = Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_aero();
+
         if (_propulsion.get_thruster().is_active())
         {
-            _propulsion.update_thrust(t);
+            _propulsion.update_thrust(aero, t);
         }
-
-        if (Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.in_air())
+        
+        if (aero)
         {
-            _aerodynamics.update(Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_air(),
-                Vehicle< Body_Mass_Dependent_Inertia<NDEG>, G>::_environment.get_aero_data(), t);
+            _aerodynamics.update(*aero, t);
         }
 
         BodyAction totalAction = _propulsion.get_action() + _aerodynamics.get_action(); // at zero
@@ -212,16 +245,15 @@ protected:
 
     void update_accelerations(double t) final override
     {
+        const auto* aero = Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_aero();
         if (_propulsion.get_thruster().is_active())
         {
-            _propulsion.update_thrust(Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_air(), 
-                Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_aero_data(), t);
+            _propulsion.update_thrust(aero, t);
         }
 
-        if (Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.in_air())
+        if (aero)
         {
-            _aerodynamics.update(Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_air(), 
-                Vehicle< Body<MOMENT_CONSTANTS::FULL>, G>::_environment.get_aero_data(), t);
+            _aerodynamics.update(*aero, t);
         }
 
         BodyAction totalAction = _propulsion.get_action() + _aerodynamics.get_action(); // at zero

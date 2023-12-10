@@ -6,15 +6,17 @@ void Vehicle_3DOF_Standard::update_accelerations(double t)
     Eigen::Vector3d force;
     force.setZero();
 
+    const auto* aero = _environment.get_aero();
+
     if (_thruster->is_active())
     {
-        _thruster->update(t);
+        _thruster->update(aero,t);
         force += _orientation.col(0) * _thruster->get_thrust();
     }
 
-    if (_environment.in_air())
+    if (aero)
     {
-        _aerodynamics->update(_environment.get_aero_data(), t);
+        _aerodynamics->update(*aero, t);
         force += _aerodynamics->get_action();
     }
 
@@ -24,6 +26,8 @@ void Vehicle_3DOF_Standard::update_accelerations(double t)
 
 void Vehicle_6DOF_Standard::update_accelerations(double t)
 {
+    const auto* aero = _environment.get_aero();
+
     double dm = _state.mass - _inertia_empty.mass;
     _center_of_mass = _inertia_empty.center_of_mass + _center_of_mass_delta * dm;
     for (auto i = 0u; i < MOMENT_CONSTANTS::FULL; i++)
@@ -33,12 +37,12 @@ void Vehicle_6DOF_Standard::update_accelerations(double t)
 
     if (_propulsion->get_thruster().is_active())
     {
-        _propulsion->update_thrust(_environment.get_air(), _environment.get_aero_data(), t);
+        _propulsion->update_thrust(aero, t);
     }
 
-    if (_environment.in_air())
+    if (aero)
     {
-        _aerodynamics->update(_environment.get_air(), _environment.get_aero_data(), t);
+        _aerodynamics->update(*aero, t);
     }
 
     BodyAction totalAction = _propulsion->get_action() + _aerodynamics->get_action(); // at zero

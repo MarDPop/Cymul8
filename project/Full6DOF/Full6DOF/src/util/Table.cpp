@@ -3,7 +3,7 @@
 #include "Vector.h"
 #include <assert.h>
 
-std::vector<double> Table::interpolate(double x, Tablulate::INTERPOLATION interp) const
+std::vector<double> Table::interpolate(double x, Tabulate::INTERPOLATION interp) const
 {
 	auto it = std::lower_bound(_x.begin(), _x.end(), x);
 	auto idx = std::distance(_x.begin(), it);
@@ -16,7 +16,7 @@ std::vector<double> Table::interpolate(double x, Tablulate::INTERPOLATION interp
 	{
 		auto dx = *(it + 1) - *it;
 		auto delta = x - *it;
-		if (interp == Tablulate::INTERPOLATION::NEAREST)
+		if (interp == Tabulate::INTERPOLATION::NEAREST)
 		{
 			p1 = _v[idx + (static_cast<double>(2.0) * delta > dx)];
 		}
@@ -27,13 +27,13 @@ std::vector<double> Table::interpolate(double x, Tablulate::INTERPOLATION interp
 			const auto& p2 = _v[idx + 1];
 			switch (interp)
 			{
-			case Tablulate::INTERPOLATION::LINEAR:
+			case Tabulate::INTERPOLATION::LINEAR:
 				for (auto i = 0u; i < NCOLS; i++)
 				{
 					p1[i] += (p2[i] - p1[i]) * delta;
 				}
 				break;
-			case Tablulate::INTERPOLATION::CUBIC:
+			case Tabulate::INTERPOLATION::CUBIC:
 				const auto& p0 = _v[idx - (idx > 0)];
 				const auto& p3 = _v[idx + 1 + (idx < (_x.size() - 2))];
 				const auto halfx = 0.5 * delta;
@@ -66,12 +66,12 @@ std::vector<double> Table::extrapolate(double x, double dx) const
 }
 
 std::vector<double> Table::get(double x,
-	Tablulate::INTERPOLATION interp = Tablulate::INTERPOLATION::LINEAR,
-	Tablulate::EXTRAPOLATION extrap = Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE) const
+	Tabulate::INTERPOLATION interp,
+	Tabulate::EXTRAPOLATION extrap) const
 {
 	if (x < _x[0])
 	{
-		if (extrap == Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE)
+		if (extrap == Tabulate::EXTRAPOLATION::HOLD_LAST_VALUE)
 		{
 			return _v[0];
 		}
@@ -79,7 +79,7 @@ std::vector<double> Table::get(double x,
 	}
 	if (x > _x.back())
 	{
-		if (extrap == Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE)
+		if (extrap == Tabulate::EXTRAPOLATION::HOLD_LAST_VALUE)
 		{
 			return _v.back();
 		}

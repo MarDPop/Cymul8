@@ -2,6 +2,8 @@
 
 #include <cstring>
 #include <algorithm>
+#include <vector>
+#include <numeric>
 
 template<typename T>
 class array_wrapper
@@ -136,7 +138,7 @@ namespace VectorUtil
         {
             sorted_data[i] = data[indices[i]];
         }
-        memset(data, sorted_data, N * sizeof(T));
+        memcpy(data, sorted_data, N * sizeof(T));
         delete[] sorted_data;
     }
 

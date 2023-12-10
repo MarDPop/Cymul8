@@ -6,8 +6,6 @@ class Thruster
 {
 protected:
 
-    const AeroData* _aero_data = nullptr;
-
     double _thrust = 0;
 
     double _mass_rate = 0;
@@ -25,12 +23,7 @@ public:
 
     virtual ~Thruster() {}
 
-    void set_aero_data(const AeroData* aero_data) 
-    {
-        this->_aero_data = aero_data;
-    }
-
-    virtual void update(double t) {}
+    virtual void update(const AeroEnvironment* aero, double t) {}
 
     virtual void start()
     {

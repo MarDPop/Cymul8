@@ -17,7 +17,7 @@ public:
         _action.setZero();
     }
 
-    virtual void update(const AeroData& aeroData, 
+    virtual void update(const AeroEnvironment& aeroData, 
         double t) {}
 
     const T& get_action() const

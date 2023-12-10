@@ -33,7 +33,7 @@ class Simulation
 
     ode<V, double> _ode;
 
-    LocalFrame* _local_frame;
+    FrameReference _local_frame;
 
     SolarSystem _solar_system;
 

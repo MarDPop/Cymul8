@@ -6,8 +6,9 @@
 #include <array>
 #include <string>
 #include "fast_math.h"
+#include <assert.h>
 
-namespace Tablulate
+namespace Tabulate
 {
 	enum class INTERPOLATION
 	{
@@ -38,7 +39,7 @@ private:
 
 	std::vector<std::vector<double>> _v;
 
-	std::vector<double> interpolate(double x, Tablulate::INTERPOLATION interp) const;
+	std::vector<double> interpolate(double x, Tabulate::INTERPOLATION interp) const;
 
 	std::vector<double> extrapolate(double x, double dx) const;
 
@@ -81,8 +82,8 @@ public:
 	}
 
 	std::vector<double> get(double x,
-		Tablulate::INTERPOLATION interp = Tablulate::INTERPOLATION::LINEAR,
-		Tablulate::EXTRAPOLATION extrap = Tablulate::EXTRAPOLATION::HOLD_LAST_VALUE) const;
+		Tabulate::INTERPOLATION interp = Tabulate::INTERPOLATION::LINEAR,
+		Tabulate::EXTRAPOLATION extrap = Tabulate::EXTRAPOLATION::HOLD_LAST_VALUE) const;
 };
 
 class XYTable
@@ -119,7 +120,7 @@ class LinearTable
 
 	Float _dv[NROWS][NCOLS];
 
-	constexpr std::size_t ROW_BYTES = NCOLS * sizeof(Float);
+	static inline constexpr std::size_t ROW_BYTES = NCOLS * sizeof(Float);
 
 	void finish()
 	{
@@ -154,7 +155,7 @@ public:
 
 	void get(Float x, Float* v) const
 	{
-		auto it = std::lower_bound(_x, _x + _length, x);
+		auto it = std::lower_bound(_x, _x + NROWS, x);
 		auto delta = x - *it;
 		auto idx = it - _x;
 		for (auto i = 0u; i < NCOLS; i++)
@@ -180,8 +181,8 @@ public:
 
 	static unsigned linear_search(const std::vector<Float>& _x, Float x)
 	{
-		auto it = std::find_if(_x.begin(), _x.end(), (const auto & a, const auto & b)[] { a > b; });
-		idx = std::distance(it, _x.begin());
+		auto it = std::find_if(_x.begin(), _x.end(), [](const Float& a, const Float& b) { a > b; });
+	    return std::distance(it, _x.begin());
 	}
 
 	static unsigned bisect_search(const std::vector<Float>& _x, Float x)
@@ -191,7 +192,8 @@ public:
 	}
 
 	BasicTable() {}
-	BasicTable(std::vector<Float> x
+
+	BasicTable(std::vector<Float> x,
 		std::vector<std::array<Float, NCOLS>> v) :
 			_x(std::move(x)),
 			_v(std::move(v))
@@ -277,10 +279,12 @@ public:
 	{
 		unsigned idx = _get_index(_x, x);
 		
+		const auto& lo = _v[idx];
+		const auto& delta = _dv[idx];
 		Float dx = x - _x[idx];
 		for (auto i = 0u; i < NCOLS; i++)
 		{
-			v[i] = _v[idx] + _dv[idx] * dx;
+			v[i] = lo[i] + delta[i] * dx;
 		}
 	}
 
@@ -367,12 +371,12 @@ private:
 		inverse2x2(A, A_inv);
 		for (auto j = 0u; j < NCOLS; j++)
 		{
-			auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
-			auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * dx2;
+			auto dvdx1 = (v[j + NCOLS] - v[j]) * half_dx1;
+			auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * half_dx2;
 
 			p[2] = dvdx1 * 2.0;
 
-			y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+			y[0] = _v[j + NCOLS] - p[2] * dx - _v[j];
 			y[1] = (dvdx2 + dvdx1) - p[2];
 
 			mult2x2(A_inv, y, p);
@@ -396,13 +400,13 @@ private:
 			inverse2x2(A, A_inv);
 			for (auto j = 0u; j < NCOLS; j++)
 			{
-				auto dvdx0 = (v[j] - v[j - NCOLS]) * dx0;
-				auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
-				auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * dx2;
+				auto dvdx0 = (v[j] - v[j - NCOLS]) * half_dx0;
+				auto dvdx1 = (v[j + NCOLS] - v[j]) * half_dx1;
+				auto dvdx2 = (v[j + NEXT_ROW] - v[j + NCOLS]) * half_dx2;
 
 				p[2] = dvdx1 + dvdx0; // c or dvdx at point x1
 
-				y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+				y[0] = _v[j + NCOLS] - p[2] * dx - _v[j];
 				y[1] = (dvdx2 + dvdx1) - p[2];
 
 				mult2x2(A_inv, y, p);
@@ -413,7 +417,7 @@ private:
 		}
 
 		// Last entry
-		dx = _x.back() - _x[_size() - 2];
+		dx = _x.back() - _x[NROWS - 2];
 		dx_sq = dx * dx;
 
 		A[0] = dx_sq * dx;
@@ -423,12 +427,12 @@ private:
 		inverse2x2(A, A_inv);
 		for (auto j = 0u; j < NCOLS; j++)
 		{
-			auto dvdx0 = (v[j] - v[j - NCOLS]) * dx0;
-			auto dvdx1 = (v[j + NCOLS] - v[j]) * dx1;
+			auto dvdx0 = (v[j] - v[j - NCOLS]) * half_dx0;
+			auto dvdx1 = (v[j + NCOLS] - v[j]) * half_dx1;
 
 			p[2] = dvdx1 + dvdx0;
 
-			y[0] = (_v[j + NCOLS] - p[2] * dx - _v[j];
+			y[0] = _v[j + NCOLS] - p[2] * dx - _v[j];
 			y[1] = dvdx1 * 2.0 - p[2];
 
 			mult2x2(A_inv, y, p);
@@ -469,7 +473,7 @@ private:
 		// could be faster with simd and precomputing dx^2 dx^3
 		for (auto j = 0u; j < NCOLS; j++)
 		{
-			v[j] = __v[j] + dx * (__p[2] + dx * (__p[1] + dx * __p[0]);
+			v[j] = __v[j] + dx * (__p[2] + dx * (__p[1] + dx * __p[0]));
 			__p += NCOEF_CUBIC;
 		}
 	}
@@ -503,8 +507,8 @@ public:
 
 	DynamicTable(unsigned __NROWS,
 				unsigned __NCOLS,
-				Table::INTERPOLATION interp = LINEAR,
-				Table::EXTRAPOLATION extrap = HOLD_LAST_VALUE) :
+				Tabulate::INTERPOLATION interp = Tabulate::INTERPOLATION::LINEAR,
+				Tabulate::EXTRAPOLATION extrap = Tabulate::EXTRAPOLATION::HOLD_LAST_VALUE) :
 		_x(new Float[__NROWS]),
 		_v(new Float[__NROWS*__NCOLS]),
 		LAST_IDX((__NROWS-1)*NCOLS),
@@ -512,49 +516,49 @@ public:
 		NCOLS(__NCOLS),
 		ROW_BYTES(__NCOLS * sizeof(Float))
 	{
-		if (interp == CUBIC && __NROWS < 4)
+		if (interp == Tabulate::INTERPOLATION::CUBIC && NROWS < 4)
 		{
-			interp = _NROWS > 1 ? LINEAR : FLOOR;
+			interp = NROWS > 1 ? Tabulate::INTERPOLATION::LINEAR : Tabulate::INTERPOLATION::FLOOR;
 		}
-		if (interp == LINEAR && __NROWS < 2)
+		if (interp == Tabulate::INTERPOLATION::LINEAR && NROWS < 2)
 		{
-			interp = FLOOR;
+			interp = Tabulate::INTERPOLATION::FLOOR;
 		}
 
 		switch (interp)
 		{
-		case NEAREST:
-			_p = new Float[__NROWS];
-			_finish = &Table::finish_nearest();
-			_interpolate = &Table::interpolate_nearest();
+		case Tabulate::INTERPOLATION::NEAREST:
+			_p = new Float[NROWS];
+			_finish = &DynamicTable::finish_nearest;
+			_interpolate = &DynamicTable::interpolate_nearest;
 			break;
-		case LINEAR:
-			_p = new Float[__NROWS * __NCOLS];
-			_finish = &Table::finish_linear();
-			_interpolate = &Table::interpolate_nearest();
+		case Tabulate::INTERPOLATION::LINEAR:
+			_p = new Float[NROWS * NCOLS];
+			_finish = &DynamicTable::finish_linear;
+			_interpolate = &DynamicTable::interpolate_nearest;
 			break;
-		case CUBIC:
-			_p = new Float[__NROWS * __NCOLS * NCOEF_CUBIC];
-			_finish = &Table::finish_cubic();
-			_interpolate = &Table::interpolate_nearest();
+		case Tabulate::INTERPOLATION::CUBIC:
+			_p = new Float[NROWS * NCOLS * NCOEF_CUBIC];
+			_finish = &DynamicTable::finish_cubic;
+			_interpolate = &DynamicTable::interpolate_nearest;
 			break;
 		default:
 			_p = nullptr;
 			break;
 		}
 
-		if (extrap == LINEAR && __NROWS < 2)
+		if (extrap == Tabulate::EXTRAPOLATION::LINEAR && NROWS < 2)
 		{
-			extrap = HOLD_LAST_VALUE;
+			extrap = Tabulate::EXTRAPOLATION::HOLD_LAST_VALUE;
 		}
 
-		if (extrap == LINEAR)
+		if (extrap == Tabulate::EXTRAPOLATION::LINEAR)
 		{
-			_extrapolate = &Table::extrapolate_linear();
+			_extrapolate = &DynamicTable::extrapolate_linear;
 		}
 		else
 		{
-			_extrapolate = &Table::extrapolate_hold_last_value();
+			_extrapolate = &DynamicTable::extrapolate_hold_last_value;
 		}
 	}
 
@@ -572,11 +576,11 @@ public:
 		finish(_p, _x, _v);
 	}
 
-	void set(const std::vector<Float>& x, const std::vector<std::array<Float, NCOLS>>& v)
+	void set(const std::vector<Float>& x, const std::vector<Float>& v)
 	{
 		assert(x.size() >= NROWS && v.size() >= NROWS);
 		memcpy(_x, x.data(), NROWS * sizeof(Float));
-		memcpy(_v, &v[0][0], NROWS * ROW_BYTES);
+		memcpy(_v, v.data(), NROWS * ROW_BYTES);
 		finish(_p, _x, _v);
 	}
 
@@ -600,4 +604,119 @@ public:
 		_interpolate(x, v);
 	}
 
+};
+
+template<typename Float, unsigned NCOLS>
+class Fixed_Incement_Table
+{
+
+	std::vector<std::array<Float, NCOLS>> _data;
+
+	std::vector<std::array<Float, NCOLS>> _delta;
+
+	const Float _inv_increment;
+
+	Float _end;
+
+public:
+
+	const Float start;
+
+	const Float increment;
+
+	Fixed_Incement_Table(Float _start,
+			Float _increment) :
+			start(_start),
+			increment(_increment),
+			_inv_increment(1.0/_increment) {}
+
+	void clear()
+	{
+		_data.clear();
+	}
+
+	void push_back(const std::array<Float, NCOLS>& v)
+	{
+		_data.push_back(v);
+		if (_data.size() > 1)
+		{
+			const auto& lo = _data[_data.size() - 2];
+			const auto& hi = _data.back();
+			std::array<Float, NCOLS> d;
+			for (auto i = 0u; i < NCOLS; i++)
+			{
+				d[i] = (hi[i] - lo[i]) * _inv_increment;
+			}
+			_delta.push_back(d);
+		}
+		_end = _data.size() * increment;
+	}
+
+	void get(Float x, Float* v) const
+	{
+		if (x < start)
+		{
+			return _data[0];
+		}
+		if (x > _end)
+		{
+			return _data.back();
+		}
+		Float d = (x - start) * _inv_increment;
+		unsigned idx = static_cast<unsigned>(d);
+		d -= idx;
+		const auto& lo = _data[idx];
+		const auto& hi = _data[idx + 1];
+		const auto& delta = _delta[idx];
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			v[i] = lo[i] + delta[i]*d;
+		}
+	}
+};
+
+template<typename Float, unsigned NROWS, unsigned NCOLS>
+class Fixed_Incement_Table_Zero_Based
+{
+
+	Float _data[NROWS][NCOLS];
+
+	Float _delta[NROWS][NCOLS];
+
+	const Float _inv_increment;
+
+public:
+
+	Fixed_Incement_Table_Zero_Based(Float increment) :
+		_inv_increment(increment) {}
+
+	void set(Float* data)
+	{
+		memset(_data, data, NROWS * NCOLS * sizeof(Float));
+		for (auto j = 0u; j < NROWS - 1; j++)
+		{
+			const auto& lo = _data[j];
+			const auto& hi = _data[j+1];
+			auto* d = _delta[j];
+			for (auto i = 0u; i < NCOLS; i++)
+			{
+				d[i] = (hi[i] - lo[i]) * _inv_increment;
+			}
+		}
+		
+	}
+
+	void get(Float x, Float* v) const
+	{
+		Float d = x*_inv_increment;
+		unsigned idx = static_cast<unsigned>(d);
+		d -= idx;
+		const auto* lo = _data[idx];
+		const auto* hi = _data[idx + 1];
+		const auto* delta = _delta[idx];
+		for (auto i = 0u; i < NCOLS; i++)
+		{
+			v[i] = lo[i] + delta[i]*d;
+		}
+	}
 };

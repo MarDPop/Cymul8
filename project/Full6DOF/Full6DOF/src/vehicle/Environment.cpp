@@ -10,21 +10,3 @@ void AeroEnvironment::compute(const Air& air,
     double beta = 1.0 + 0.2*mach*mach;
     impact_pressure = air.pressure*(1.0 - beta*beta*beta*sqrt(beta));
 }
-
-void Environment::update(const Eigen::Vector3d& position,
-    const Eigen::Vector3d& velocity,
-    double time,
-    bool near_body)
-{
-    _ref.TALO = time;
-
-    double jd2000_utc = _ref.jd2000_utc_launch + time*Time::SEC_2_DAY_FRACTION;
-
-    _planetary_system->set_utc_jd2000(jd2000_utc);
-
-    _current_planet->gravity().compute(_near_body.get_coordinates().PCF, 
-        _near_body.get_coordinates().RTP.radius,
-        _frame_acceleration);
-
-    
-}

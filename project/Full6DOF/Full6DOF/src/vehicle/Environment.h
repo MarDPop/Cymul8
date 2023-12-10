@@ -6,17 +6,16 @@
 #include "../physics/Geometry.h"
 #include "../util/Table.h"
 
-struct GroundAndTimeReference
+struct FrameReference
 {
     double jd2000_utc_launch;
 
-    long unix_ns_launch;
+    long unix_ns;
 
-    double TALO;
+    Coordinate::GeocentricFixed point;
 
-    double jd2000_ut1;
-
-    Coordinate::GeocentricFixed ground;
+    static FrameReference from_launch(const Coordinate::Geodetic& lla,
+        const Time::Gregorian& launch_time);
 };
 
 struct PlanetCoordinates
@@ -39,9 +38,13 @@ struct AeroEnvironment
     * @brief direction of the vehicle against the air in the ecef frame
     */
     Eigen::Vector3d air_velocity_ecef_unit;
+
     double airspeed;
+
     double mach;
+
     double dynamic_pressure;
+
     double impact_pressure;
 
     void compute(const Air& air, 
@@ -68,8 +71,6 @@ class PlanetaryFrame
 {
     PlanetaryBody* _current_planet;
 
-    double _jd;
-
     double _local_to_TT;
 
     PlanetCoordinates _coordinates;
@@ -77,6 +78,11 @@ class PlanetaryFrame
 public:
 
     void update(const Eigen::Vector3d& pos,
+        const Eigen::Vector3d& vel,
+        double talo);
+
+    void update(const FrameReference& frame_ref,
+        const Eigen::Vector3d& pos,
         const Eigen::Vector3d& vel,
         double talo);
 
@@ -145,11 +151,6 @@ public:
     {
         return _em_environment;
     }
-
-    void update_as_local_frame(const PlanetaryFrame& localFrame,
-        const Eigen::Vector3d& pos,
-        const Eigen::Vector3d& vel,
-        double time);
 
     void update_from_planetary_frame(const PlanetaryFrame& planetaryFrame,
         const Eigen::Vector3d& pos, 

@@ -23,9 +23,9 @@ public:
         _action.zero();
     }
 
-    void update_thrust(const Air& air, const AeroData& aero_data, double t)
+    void update_thrust(const AeroEnvironment* aero, double t)
     {
-        _thruster.update(air, aero_data, t);
+        _thruster.update(aero, t);
         _action.force = _thrust_vector*_thruster.get_thrust();
     }
 
@@ -67,11 +67,10 @@ public:
         _thruster = std::move(__thruster);
     }
 
-    void update_thrust(const Air& air, 
-        const AeroData& aero_data, 
+    void update_thrust(const AeroEnvironment* aero_data, 
         double t)
     {
-        _thruster->update(air, aero_data, t);
+        _thruster->update(aero_data, t);
         _action.force = _thrust_vector * _thruster->get_thrust();
     }
 

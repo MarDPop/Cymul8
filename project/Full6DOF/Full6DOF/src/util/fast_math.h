@@ -7,7 +7,7 @@ namespace fmath
     inline float inv_fast(float x) {
         union { float f; int i; } v;
         float w, sx;
-        int m;
+        // int m;
 
         sx = (x < 0) ? -1 : 1;
         x = sx * x;

@@ -145,7 +145,7 @@ class PlanetaryBody
 
 public:
 
-    const Barycenter& const barycenter;
+    const Barycenter& barycenter;
 
     const int id;
 

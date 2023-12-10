@@ -105,7 +105,7 @@ namespace Time
     {
         // All of these must be integer divisions
         std::array<int, 3> ymd;
-        int f = j + 1401 + (((4 * j + 274277) / 146097) * 3) / 4 - 38;
+        int f = jdn + 1401 + (((4 * jdn + 274277) / 146097) * 3) / 4 - 38;
         int e = 4 * f + 3;
         int g = (e % 1461) / 4;
         int h = 5 * g + 2;
